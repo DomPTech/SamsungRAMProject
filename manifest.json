@@ -1,0 +1,22 @@
+{
+  "name": "NFC Nexus",
+  "short_name": "Nexus",
+  "description": "Seamless NFC Tag Interaction",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#0f172a",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/3596/3596009.png",
+      "type": "image/png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/3596/3596009.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ]
+}
