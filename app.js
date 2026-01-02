@@ -26,14 +26,12 @@ function log(message, type = 'system') {
     const entry = document.createElement('div');
     entry.className = `log-entry ${type}`;
     const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-    entry.innerHTML = `<span class="time">[${time}]</span> <span class="msg">${message}</span>`;
+    entry.textContent = `[${time}] ${message}`;
     logContent.prepend(entry);
 }
 
 function showToast(message, duration = 3000) {
     toast.textContent = message;
-    toast.style.left = '50%';
-    toast.style.transform = 'translateX(-50%)';
     toast.classList.remove('hidden');
     setTimeout(() => {
         toast.classList.add('hidden');
