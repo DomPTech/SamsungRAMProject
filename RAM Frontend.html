@@ -5,13 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Denture Progress | RAM</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
-<!--Run with open "RAM Frontend.html"-->
+
     <style>
         :root {
             --primary: #2f5d8a;
             --primary-dark: #1f3c88;
             --secondary: #248E9C;
             --accent: #6ea235;
+            --danger: #c62828;
             --light-bg: #f4f7f9;
             --white: #ffffff;
             --text-dark: #333333;
@@ -25,66 +26,63 @@
             color: var(--text-dark);
         }
 
+        .hidden { display: none !important; }
+
+        /* Buttons */
         .btn {
             border: none;
             border-radius: 8px;
             padding: 12px 24px;
             font-weight: 600;
             cursor: pointer;
-            transition: transform 0.2s, background 0.2s;
+            transition: 0.2s;
         }
 
-        .btn:hover {
-            transform: translateY(-2px);
-            filter: brightness(1.1);
-        }
+        .btn:hover { filter: brightness(1.1); transform: translateY(-1px); }
 
-        header {
-            background: var(--primary);
-            color: white;
-            padding: 1rem 2rem;
-            box-shadow: var(--shadow);
-        }
-
-        .container {
-            max-width: 1000px;
-            margin: 0 auto;
-            padding: 40px 20px;
-        }
-
+        /* --- SCREEN 1: START --- */
         #startScreen {
             height: 100vh;
             display: flex;
             justify-content: center;
             align-items: center;
-            background: linear-gradient(135deg, #2f5d8a 0%, #1f3c88 100%);
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
         }
 
         .start-card {
             background: white;
-            padding: 50px;
-            border-radius: 20px;
+            padding: 60px;
+            border-radius: 24px;
             text-align: center;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            box-shadow: 0 20px 50px rgba(0,0,0,0.3);
         }
 
-        .login-card {
+        /* --- SCREEN 2: AUTH --- */
+        #authScreen {
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: var(--light-bg);
+        }
+
+        .auth-card {
             background: white;
             width: 100%;
-            max-width: 450px;
-            margin: 80px auto;
+            max-width: 400px;
             padding: 40px;
             border-radius: 16px;
             box-shadow: var(--shadow);
         }
 
-        .form-group { margin-bottom: 20px; }
-        label { display: block; margin-bottom: 8px; font-weight: 600; color: var(--primary); }
-        input { width: 100%; padding: 12px; border: 2px solid #ddd; border-radius: 8px; box-sizing: border-box; }
+        .input-group { margin-bottom: 20px; }
+        .input-group label { display: block; margin-bottom: 8px; font-weight: 600; color: var(--primary); }
+        input { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; }
 
+        /* --- SCREEN 3: DASHBOARD --- */
         .topbar {
             background: var(--primary-dark);
-            color: rgba(255,255,255,0.8);
+            color: white;
             padding: 8px 30px;
             font-size: 13px;
             display: flex;
@@ -106,23 +104,40 @@
             color: #666;
             font-size: 14px;
             font-weight: 500;
+            cursor: pointer;
+        }
+
+        .nav-links a:hover { color: var(--primary); }
+
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 40px 20px;
         }
 
         .dashboard-grid {
             display: grid;
             grid-template-columns: 1fr 350px;
             gap: 30px;
-            margin-top: 30px;
         }
 
-        .status-card {
+        .card {
             background: white;
             padding: 30px;
             border-radius: 12px;
             box-shadow: var(--shadow);
+            margin-bottom: 20px;
         }
 
-        .fade-in { animation: fadeIn 0.5s ease-in; }
+        .step-item {
+            padding: 15px;
+            background: #f0f7ff;
+            border-left: 5px solid var(--secondary);
+            border-radius: 4px;
+            margin-top: 15px;
+        }
+
+        .fade-in { animation: fadeIn 0.4s ease-in; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
     </style>
 </head>
@@ -130,92 +145,140 @@
 
 <div id="startScreen">
     <div class="start-card">
-        <h1 style="margin-bottom: 30px;">Denture Progress</h1>
-        <button class="btn" style="background: var(--accent); color: white;" onclick="showLogin()">Get Started</button>
+        <h1 style="color: var(--primary); font-size: 2.5rem; margin-bottom: 10px;">Denture Progress</h1>
+        <p style="color: #666; margin-bottom: 30px;">Track your dental health journey.</p>
+        <button class="btn" style="background: var(--accent); color: white; padding: 15px 60px; font-size: 1.2rem;" onclick="showAuth()">Login</button>
     </div>
 </div>
 
-<div id="loginScreen" style="display:none;" class="fade-in">
-    <header><div style="font-weight: bold;">Denture Progress</div></header>
-    <div class="login-card">
-        <h2 style="color: var(--primary);">Log In</h2>
-        <div class="form-group">
-            <label>Username</label>
-            <input type="text">
+<div id="authScreen" class="hidden fade-in">
+    <div class="auth-card">
+        <h2 id="authTitle" style="margin-top:0; color: var(--primary);">Welcome Back</h2>
+        <div class="input-group">
+            <label>Email Address</label>
+            <input type="email" id="email" placeholder="Enter your email">
         </div>
-        <div class="form-group">
+        <div class="input-group">
             <label>Password</label>
-            <input type="password">
+            <input type="password" id="pass" placeholder="••••••••">
         </div>
-        <button class="btn" style="background: var(--secondary); color: white; width: 100%;" onclick="showDashboard()">Log In</button>
+        <button class="btn" style="background: var(--secondary); color: white; width: 100%;" onclick="showDashboard()">Continue</button>
+        <p style="text-align: center; font-size: 0.9rem; margin-top: 20px; color: #666;">
+            <span id="toggleText">Need an account?</span>
+            <a href="javascript:void(0)" onclick="toggleAuth()" style="color: var(--primary); font-weight: bold; text-decoration: none;">Click here</a>
+        </p>
     </div>
 </div>
 
-<div id="dashboard" style="display:none;" class="fade-in">
+<div id="dashboard" class="hidden fade-in">
     <div class="topbar">
+        <span id="liveTime"></span>
         <span>📞 (865) 579-1530</span>
         <span>✉️ info@ramusa.org</span>
     </div>
 
     <nav class="navbar">
         <div class="nav-links">
-            <a href="about:blank">About</a>
-            <a href="about:blank">Schedule</a>
-            <a href="about:blank">Telehealth</a>
-            <a href="about:blank">FAQ</a>
+            <a onclick="renderPage('home')">Home</a>
+            <a onclick="renderPage('about')">About</a>
+            <a onclick="renderPage('schedule')">Schedule</a>
+            <a onclick="renderPage('faq')">FAQ</a>
         </div>
         <div class="nav-actions">
-            <button class="btn" style="background: #eee; margin-right: 10px;" onclick="location.href='about:blank'">Volunteer</button>
-            <button class="btn" style="background: var(--primary); color: white;" onclick="location.href='about:blank'">Donate</button>
+            <button class="btn" style="background: var(--danger); color: white; padding: 8px 15px;" onclick="location.reload()">Logout</button>
         </div>
     </nav>
 
-    <div class="container">
-        <div class="dashboard-grid">
-            <div>
-                <h1 style="color: var(--primary); margin: 0;">Welcome back, Patient!</h1>
-                <p id="currentDateTime" style="color: #666; font-size: 1.1rem; font-weight: 500; margin-top: 10px;"></p>
-
-                <div class="status-card" style="margin-top: 30px;">
-                    <h3>Progress Steps</h3>
-                    <div style="padding: 15px; background: #f0f7ff; border-left: 5px solid var(--secondary); border-radius: 4px;">
-                        1. Initial Consultation (Confirmed)
-                    </div>
-                </div>
-            </div>
-            <div class="status-card" style="height: fit-content;">
-                <h3 style="margin-top:0">Clinic Info</h3>
-                <div style="background: #eee; height: 150px; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #999;">Map/Video Placeholder</div>
-            </div>
+    <div class="container" id="mainContent">
         </div>
-    </div>
 </div>
 
 <script>
-    function showLogin() {
-        document.getElementById("startScreen").style.display = "none";
-        document.getElementById("loginScreen").style.display = "block";
+    let isLogin = true;
+
+    // --- NAVIGATION LOGIC ---
+    function showAuth() {
+        document.getElementById("startScreen").classList.add("hidden");
+        document.getElementById("authScreen").classList.remove("hidden");
+    }
+
+    function toggleAuth() {
+        isLogin = !isLogin;
+        document.getElementById("authTitle").innerText = isLogin ? "Welcome Back" : "Create Account";
+        document.getElementById("toggleText").innerText = isLogin ? "Need an account?" : "Already have an account?";
     }
 
     function showDashboard() {
-        document.getElementById("loginScreen").style.display = "none";
-        document.getElementById("dashboard").style.display = "block";
-        updateTime(); // Run once immediately
-        setInterval(updateTime, 1000); // Update every second
+        const email = document.getElementById('email').value || "Guest";
+        document.getElementById("authScreen").classList.add("hidden");
+        document.getElementById("dashboard").classList.remove("hidden");
+        renderPage('home', email.split('@')[0]);
+        startTime();
     }
 
-    function updateTime() {
-        const now = new Date();
-        const options = {
-            weekday: 'long',
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit',
-            second: '2-digit'
-        };
-        document.getElementById('currentDateTime').innerText = now.toLocaleDateString('en-US', options);
+    // --- CONTENT RENDERER (Functional Pages) ---
+    function renderPage(page, name = "Patient") {
+        const content = document.getElementById("mainContent");
+
+        if (page === 'home') {
+            content.innerHTML = `
+                <div class="dashboard-grid">
+                    <div>
+                        <h1 style="color: var(--primary); margin: 0;">Welcome, ${name}!</h1>
+                        <p style="color: #666; font-size: 1.1rem; margin-top: 5px;">Your recovery is our priority.</p>
+                        <div class="card" style="margin-top: 30px;">
+                            <h3>Current Progress</h3>
+                            <div class="step-item">
+                                <strong>Step 1:</strong> Initial Impression (Completed)
+                            </div>
+                            <div class="step-item" style="background: #fff; border-left-color: #ddd;">
+                                <strong>Step 2:</strong> Wax Try-in (Pending)
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card" style="height: fit-content;">
+                        <h3>Clinic Status</h3>
+                        <div style="background: #eee; height: 180px; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #999;">Map View</div>
+                    </div>
+                </div>`;
+        } else if (page === 'about') {
+            content.innerHTML = `
+                <div class="card">
+                    <h1>About RAM</h1>
+                    <p>Remote Area Medical (RAM) is a non-profit provider of free mobile clinics. We provide high-quality dental, vision, and medical care to those who need it most.</p>
+                </div>`;
+        } else if (page === 'schedule') {
+            content.innerHTML = `
+                <div class="card">
+                    <h1>Clinic Schedule</h1>
+                    <p>Below are upcoming free clinics in your area:</p>
+                    <ul style="line-height: 2;">
+                        <li><strong>Knoxville, TN:</strong> Jan 24-25, 2026</li>
+                        <li><strong>Cookeville, TN:</strong> Feb 07-08, 2026</li>
+                    </ul>
+                </div>`;
+        } else if (page === 'faq') {
+            content.innerHTML = `
+                <div class="card">
+                    <h1>FAQ</h1>
+                    <div style="margin-bottom: 20px;">
+                        <strong>Q: How do I prepare for my appointment?</strong>
+                        <p>A: Bring a list of current medications and ensure you arrive 15 minutes early.</p>
+                    </div>
+                    <div>
+                        <strong>Q: Are the services really free?</strong>
+                        <p>A: Yes, all services provided at the clinic are 100% free of charge.</p>
+                    </div>
+                </div>`;
+        }
+    }
+
+    // --- UTILITIES ---
+    function startTime() {
+        setInterval(() => {
+            const now = new Date();
+            document.getElementById('liveTime').innerText = now.toLocaleString();
+        }, 1000);
     }
 </script>
 
