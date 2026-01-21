@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Denture Progress | RAM</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+<!-- Run with open "RAM Frontend.html"-->
+    <style>
+        :root {
+            --primary: #2f5d8a;
+            --primary-dark: #1f3c88;
+            --secondary: #248E9C;
+            --accent: #6ea235;
+            --light-bg: #f4f7f9;
+            --white: #ffffff;
+            --text-dark: #333333;
+            --shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+
+        body {
+            margin: 0;
+            font-family: 'Inter', sans-serif;
+            background: var(--light-bg);
+            color: var(--text-dark);
+        }
+
+        .btn {
+            border: none;
+            border-radius: 8px;
+            padding: 12px 24px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, background 0.2s;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            filter: brightness(1.1);
+        }
+
+        header {
+            background: var(--primary);
+            color: white;
+            padding: 1rem 2rem;
+            box-shadow: var(--shadow);
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+
+        #startScreen {
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: linear-gradient(135deg, #2f5d8a 0%, #1f3c88 100%);
+        }
+
+        .start-card {
+            background: white;
+            padding: 50px;
+            border-radius: 20px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .login-card {
+            background: white;
+            width: 100%;
+            max-width: 450px;
+            margin: 80px auto;
+            padding: 40px;
+            border-radius: 16px;
+            box-shadow: var(--shadow);
+        }
+
+        .form-group { margin-bottom: 20px; }
+        label { display: block; margin-bottom: 8px; font-weight: 600; color: var(--primary); }
+        input { width: 100%; padding: 12px; border: 2px solid #ddd; border-radius: 8px; box-sizing: border-box; }
+
+        .topbar {
+            background: var(--primary-dark);
+            color: rgba(255,255,255,0.8);
+            padding: 8px 30px;
+            font-size: 13px;
+            display: flex;
+            gap: 20px;
+        }
+
+        .navbar {
+            background: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 30px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+
+        .nav-links a {
+            margin-right: 20px;
+            text-decoration: none;
+            color: #666;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 1fr 350px;
+            gap: 30px;
+            margin-top: 30px;
+        }
+
+        .status-card {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+        }
+
+        .fade-in { animation: fadeIn 0.5s ease-in; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    </style>
+</head>
+<body>
+
+<div id="startScreen">
+    <div class="start-card">
+        <h1 style="margin-bottom: 30px;">Denture Progress</h1>
+        <button class="btn" style="background: var(--accent); color: white;" onclick="showLogin()">Get Started</button>
+    </div>
+</div>
+
+<div id="loginScreen" style="display:none;" class="fade-in">
+    <header><div style="font-weight: bold;">Denture Progress</div></header>
+    <div class="login-card">
+        <h2 style="color: var(--primary);">Log In</h2>
+        <div class="form-group">
+            <label>Username</label>
+            <input type="text">
+        </div>
+        <div class="form-group">
+            <label>Password</label>
+            <input type="password">
+        </div>
+        <button class="btn" style="background: var(--secondary); color: white; width: 100%;" onclick="showDashboard()">Log In</button>
+    </div>
+</div>
+
+<div id="dashboard" style="display:none;" class="fade-in">
+    <div class="topbar">
+        <span>📞 (865) 579-1530</span>
+        <span>✉️ info@ramusa.org</span>
+    </div>
+
+    <nav class="navbar">
+        <div class="nav-links">
+            <a href="about:blank">About</a>
+            <a href="about:blank">Schedule</a>
+            <a href="about:blank">Telehealth</a>
+            <a href="about:blank">FAQ</a>
+        </div>
+        <div class="nav-actions">
+            <button class="btn" style="background: #eee; margin-right: 10px;" onclick="location.href='about:blank'">Volunteer</button>
+            <button class="btn" style="background: var(--primary); color: white;" onclick="location.href='about:blank'">Donate</button>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="dashboard-grid">
+            <div>
+                <h1 style="color: var(--primary); margin: 0;">Welcome back, Patient!</h1>
+                <p id="currentDateTime" style="color: #666; font-size: 1.1rem; font-weight: 500; margin-top: 10px;"></p>
+
+                <div class="status-card" style="margin-top: 30px;">
+                    <h3>Progress Steps</h3>
+                    <div style="padding: 15px; background: #f0f7ff; border-left: 5px solid var(--secondary); border-radius: 4px;">
+                        1. Initial Consultation (Confirmed)
+                    </div>
+                </div>
+            </div>
+            <div class="status-card" style="height: fit-content;">
+                <h3 style="margin-top:0">Clinic Info</h3>
+                <div style="background: #eee; height: 150px; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #999;">Map/Video Placeholder</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function showLogin() {
+        document.getElementById("startScreen").style.display = "none";
+        document.getElementById("loginScreen").style.display = "block";
+    }
+
+    function showDashboard() {
+        document.getElementById("loginScreen").style.display = "none";
+        document.getElementById("dashboard").style.display = "block";
+        updateTime(); // Run once immediately
+        setInterval(updateTime, 1000); // Update every second
+    }
+
+    function updateTime() {
+        const now = new Date();
+        const options = {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit'
+        };
+        document.getElementById('currentDateTime').innerText = now.toLocaleDateString('en-US', options);
+    }
+</script>
+
+</body>
+</html>
