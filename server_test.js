@@ -17,8 +17,8 @@ const btnCancel = document.getElementById('btn-cancel');
 const btnSave = document.getElementById('btn-save');
 
 let editingId = null;
-let currentIp = "localhost";
-let mockData = [
+let currentIp = localStorage.getItem('pi-server-ip') || "localhost";
+let mockData = JSON.parse(localStorage.getItem('pi-server-data')) || [
     { id: 1, name: "Dominick", value: "Pelaia" },
     { id: 2, name: "Levi", value: "Dunn" }
 ];
@@ -41,25 +41,21 @@ function showToast(message, duration = 3000) {
 
 // Data Fetching Logic
 async function fetchData() {
-    log(`Fetching data from ${currentIp}...`, 'info');
+    log(`Connecting to http://${currentIp}:5000...`, 'info');
 
-    // In a real scenario, this would be a fetch call:
-    // try {
-    //     const res = await fetch(`http://${currentIp}:5000/api/rows`);
-    //     const data = await res.json();
-    //     renderTable(data);
-    //     setConnected(true);
-    // } catch (e) {
-    //     log(`Connection failed: ${e.message}`, 'error');
-    //     setConnected(false);
-    // }
+    try {
+        const res = await fetch(`http://${currentIp}:5000/api/rows`);
+        if (!res.ok) throw new Error(`Server returned ${res.status}`);
+        const data = await res.json();
 
-    // Mocking for demonstration
-    setTimeout(() => {
-        renderTable(mockData);
+        mockData = data; // Keep sync for local state if needed
+        renderTable(data);
         setConnected(true);
-        log("Data synchronized successfully.", "success");
-    }, 800);
+        log("Data synchronized from Pi.", "success");
+    } catch (e) {
+        log(`Connection failed: ${e.message}. Ensure the server is running on the Pi.`, 'error');
+        setConnected(false);
+    }
 }
 
 function renderTable(data) {
@@ -105,50 +101,46 @@ function setConnected(status) {
 
 // CRUD Operations
 async function saveRow(name, value) {
-    log(`Saving row: ${name}...`, 'info');
+    log(`Transmitting row: ${name}...`, 'info');
 
-    // Real API implementation:
-    // try {
-    //     const method = editingId ? 'PUT' : 'POST';
-    //     const url = editingId ? `http://${currentIp}:5000/api/rows/${editingId}` : `http://${currentIp}:5000/api/rows`;
-    //     await fetch(url, {
-    //         method: method,
-    //         headers: { 'Content-Type': 'application/json' },
-    //         body: JSON.stringify({ name, value })
-    //     });
-    //     await fetchData();
-    // } catch (e) { log(e.message, 'error'); }
+    try {
+        const method = editingId ? 'PUT' : 'POST';
+        const url = editingId ? `http://${currentIp}:5000/api/rows/${editingId}` : `http://${currentIp}:5000/api/rows`;
 
-    // Mock
-    if (editingId) {
-        const index = mockData.findIndex(r => r.id == editingId);
-        mockData[index] = { ...mockData[index], name, value };
-        log(`Updated row #${editingId}`, 'success');
-    } else {
-        const newId = mockData.length > 0 ? Math.max(...mockData.map(r => r.id)) + 1 : 1;
-        mockData.push({ id: newId, name, value });
-        log(`Added new row #${newId}`, 'success');
+        const res = await fetch(url, {
+            method: method,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name, value })
+        });
+
+        if (!res.ok) throw new Error("Server failed to save");
+
+        log(`Server confirmed ${editingId ? 'update' : 'addition'}.`, 'success');
+        await fetchData(); // Refresh table from server
+        closeModal();
+        showToast("Changes saved to Pi");
+    } catch (e) {
+        log(`Save failed: ${e.message}`, 'error');
+        showToast("Error saving data");
     }
-
-    renderTable(mockData);
-    closeModal();
-    showToast("Changes saved");
 }
 
 async function deleteRow(id) {
     if (!confirm(`Delete row #${id}?`)) return;
 
-    log(`Deleting row #${id}...`, 'info');
+    log(`Requesting deletion of #${id}...`, 'info');
 
-    // Real API:
-    // await fetch(`http://${currentIp}:5000/api/rows/${id}`, { method: 'DELETE' });
-    // await fetchData();
+    try {
+        const res = await fetch(`http://${currentIp}:5000/api/rows/${id}`, { method: 'DELETE' });
+        if (!res.ok) throw new Error("Server deletion failed");
 
-    // Mock
-    mockData = mockData.filter(r => r.id != id);
-    renderTable(mockData);
-    log(`Deleted row #${id}`, 'success');
-    showToast("Row deleted");
+        log(`Deleted row #${id} from Pi`, 'success');
+        await fetchData();
+        showToast("Row deleted");
+    } catch (e) {
+        log(`Deletion error: ${e.message}`, 'error');
+        showToast("Error deleting row");
+    }
 }
 
 // Modal Logic
@@ -175,6 +167,7 @@ function closeModal() {
 // Event Listeners
 btnConnect.onclick = () => {
     currentIp = serverIpInput.value || "localhost";
+    localStorage.setItem('pi-server-ip', currentIp);
     fetchData();
 };
 
@@ -194,5 +187,6 @@ btnClearLog.onclick = () => {
 
 // Initial Fetch
 window.onload = () => {
+    serverIpInput.value = currentIp;
     fetchData();
 };
