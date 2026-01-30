@@ -70,9 +70,10 @@
                 <table id="data-table">
                     <thead>
                         <tr>
-                            <th>ID</th>
-                            <th>Name</th>
-                            <th>Value</th>
+                            <th>Serial</th>
+                            <th>Patient</th>
+                            <th>Step</th>
+                            <th>Last Updated</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
@@ -100,13 +101,14 @@
                 <h3 id="modal-title">Add New Row</h3>
             </div>
             <div class="glass-input-group">
-                <label for="row-name">Name</label>
-                <input type="text" id="row-name" placeholder="Enter first name">
+                <label for="row-name">Serial Number</label>
+                <input type="text" id="row-name" placeholder="Enter Serial Number (e.g., 1234)">
             </div>
             <br>
-            <div class="glass-input-group">
-                <label for="row-value">Value</label>
-                <input type="text" id="row-value" placeholder="Enter last name">
+            <!-- Hidden or Optional Patient Name if I implement that on server later, strictly server only takes serial for scan currently -->
+            <div class="glass-input-group" style="display:none;">
+                <label for="row-value">Patient Name</label>
+                <input type="text" id="row-value" placeholder="Optional Patient Name">
             </div>
             <div class="modal-footer">
                 <button class="btn btn-secondary" id="btn-cancel">Cancel</button>

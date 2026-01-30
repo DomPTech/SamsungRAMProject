@@ -11,17 +11,13 @@ const toast = document.getElementById('toast');
 // Modal Elements
 const formOverlay = document.getElementById('form-overlay');
 const modalTitle = document.getElementById('modal-title');
-const rowNameInput = document.getElementById('row-name');
-const rowValueInput = document.getElementById('row-value');
+const rowNameInput = document.getElementById('row-name'); // Acts as Serial Number
+const rowValueInput = document.getElementById('row-value'); // Acts as Patient Name (unused for now)
 const btnCancel = document.getElementById('btn-cancel');
 const btnSave = document.getElementById('btn-save');
 
 let editingId = null;
-let currentIp = localStorage.getItem('pi-server-ip') || "localhost";
-let mockData = JSON.parse(localStorage.getItem('pi-server-data')) || [
-    { id: 1, name: "Dominick", value: "Pelaia" },
-    { id: 2, name: "Levi", value: "Dunn" }
-];
+let currentIp = localStorage.getItem('pi-server-ip') || "raspberrypi.local";
 
 function log(message, type = 'system') {
     const entry = document.createElement('div');
@@ -41,36 +37,42 @@ function showToast(message, duration = 3000) {
 
 // Data Fetching Logic
 async function fetchData() {
-    log(`Connecting to http://${currentIp}:5000...`, 'info');
+    // Port 5001 is the correct port for server.py
+    const url = `http://${currentIp}:5001/api/dentures`;
+    log(`Connecting to ${url}...`, 'info');
 
     try {
-        const res = await fetch(`http://${currentIp}:5000/api/rows`);
+        const res = await fetch(url);
         if (!res.ok) throw new Error(`Server returned ${res.status}`);
         const data = await res.json();
 
-        mockData = data; // Keep sync for local state if needed
-        renderTable(data);
+        // Expecting data.dentures array based on server.py
+        renderTable(data.dentures || []);
         setConnected(true);
         log("Data synchronized from Pi.", "success");
     } catch (e) {
-        log(`Connection failed: ${e.message}. Ensure the server is running on the Pi.`, 'error');
+        log(`Connection failed: ${e.message}. Ensure the server is running on ${currentIp}:5001`, 'error');
         setConnected(false);
     }
 }
 
 function renderTable(data) {
     tableBody.innerHTML = '';
+    if (data.length === 0) {
+        tableBody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:20px;">No dentures found. Add one to test.</td></tr>';
+        return;
+    }
+
     data.forEach(row => {
         const tr = document.createElement('tr');
+        // server.py keys: serial, patient, step_name, updated
         tr.innerHTML = `
-            <td>${row.id}</td>
-            <td>${row.name}</td>
-            <td>${row.value}</td>
+            <td>${row.serial}</td>
+            <td>${row.patient}</td>
+            <td>${row.step_name} (${row.step_index})</td>
+            <td>${new Date(row.updated).toLocaleString()}</td>
             <td class="actions-cell">
-                <button class="icon-btn edit-btn" data-id="${row.id}">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 113 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
-                </button>
-                <button class="icon-btn delete-btn delete" data-id="${row.id}">
+                <button class="icon-btn delete-btn delete" data-id="${row.serial}">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
                 </button>
             </td>
@@ -78,10 +80,6 @@ function renderTable(data) {
         tableBody.appendChild(tr);
     });
 
-    // Attach listeners
-    document.querySelectorAll('.edit-btn').forEach(btn => {
-        btn.onclick = () => openModal(btn.dataset.id);
-    });
     document.querySelectorAll('.delete-btn').forEach(btn => {
         btn.onclick = () => deleteRow(btn.dataset.id);
     });
@@ -89,7 +87,7 @@ function renderTable(data) {
 
 function setConnected(status) {
     if (status) {
-        statusText.textContent = `Connected to ${currentIp}`;
+        statusText.textContent = `Connected to ${currentIp}:5001`;
         statusPanel.classList.remove('error');
         statusPanel.classList.add('supported');
     } else {
@@ -100,43 +98,44 @@ function setConnected(status) {
 }
 
 // CRUD Operations
-async function saveRow(name, value) {
-    log(`Transmitting row: ${name}...`, 'info');
+async function saveRow(serial) {
+    // We treat "Add Row" as "Simulate Scan" because server.py only has /api/scan to create/update
+    log(`Simulating scan for serial: ${serial}...`, 'info');
 
     try {
-        const method = editingId ? 'PUT' : 'POST';
-        const url = editingId ? `http://${currentIp}:5000/api/rows/${editingId}` : `http://${currentIp}:5000/api/rows`;
+        const url = `http://${currentIp}:5001/api/scan`;
 
         const res = await fetch(url, {
-            method: method,
+            method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name, value })
+            body: JSON.stringify({ serialNumber: serial })
         });
 
-        if (!res.ok) throw new Error("Server failed to save");
+        if (!res.ok) throw new Error("Server failed to save/scan");
+        const result = await res.json();
 
-        log(`Server confirmed ${editingId ? 'update' : 'addition'}.`, 'success');
+        log(`Server responded: ${result.status}. New Step: ${result.step_name}`, 'success');
         await fetchData(); // Refresh table from server
         closeModal();
-        showToast("Changes saved to Pi");
+        showToast("Denture updated via simulated scan");
     } catch (e) {
         log(`Save failed: ${e.message}`, 'error');
         showToast("Error saving data");
     }
 }
 
-async function deleteRow(id) {
-    if (!confirm(`Delete row #${id}?`)) return;
+async function deleteRow(serial) {
+    if (!confirm(`Delete denture #${serial}?`)) return;
 
-    log(`Requesting deletion of #${id}...`, 'info');
+    log(`Requesting deletion of #${serial}...`, 'info');
 
     try {
-        const res = await fetch(`http://${currentIp}:5000/api/rows/${id}`, { method: 'DELETE' });
+        const res = await fetch(`http://${currentIp}:5001/api/dentures/${serial}`, { method: 'DELETE' });
         if (!res.ok) throw new Error("Server deletion failed");
 
-        log(`Deleted row #${id} from Pi`, 'success');
+        log(`Deleted #${serial} from Pi`, 'success');
         await fetchData();
-        showToast("Row deleted");
+        showToast("Denture deleted");
     } catch (e) {
         log(`Deletion error: ${e.message}`, 'error');
         showToast("Error deleting row");
@@ -144,29 +143,38 @@ async function deleteRow(id) {
 }
 
 // Modal Logic
-function openModal(id = null) {
-    editingId = id;
-    if (id) {
-        modalTitle.textContent = "Edit Row";
-        const row = mockData.find(r => r.id == id);
-        rowNameInput.value = row.name;
-        rowValueInput.value = row.value;
-    } else {
-        modalTitle.textContent = "Add New Row";
-        rowNameInput.value = "";
-        rowValueInput.value = "";
-    }
+function openModal() {
+    modalTitle.textContent = "Simulate Scan (Add/Update)";
+    rowNameInput.value = "";
     formOverlay.classList.add('active');
 }
 
 function closeModal() {
     formOverlay.classList.remove('active');
-    editingId = null;
 }
 
 // Event Listeners
 btnConnect.onclick = () => {
-    currentIp = serverIpInput.value || "localhost";
+    // Allow user to enter standard IP or IP:PORT
+    let inputVal = serverIpInput.value || "raspberrypi.local";
+    // Strip http:// if present
+    inputVal = inputVal.replace('http://', '').replace('https://', '');
+
+    // If user didn't specify port, we assume they mean the host IP, so we keep it as is.
+    // The fetchData function adds :5001. 
+    // However, if the user explicitly typed 192.168.1.50:5001, we should handle that.
+    // For simplicity, let's assume the input is just the IP address as the placeholder suggests "Pi IP Address"
+
+    // Check if port is already in input
+    if (inputVal.includes(':')) {
+        // If they added a port, let's just use the hostname part for currentIp variable consistency 
+        // OR we just assume they know what they are doing. 
+        // Current logic assumes `currentIp` is just the host.
+        currentIp = inputVal.split(':')[0];
+    } else {
+        currentIp = inputVal;
+    }
+
     localStorage.setItem('pi-server-ip', currentIp);
     fetchData();
 };
@@ -174,10 +182,10 @@ btnConnect.onclick = () => {
 btnAdd.onclick = () => openModal();
 btnCancel.onclick = closeModal;
 btnSave.onclick = () => {
-    if (rowNameInput.value && rowValueInput.value) {
-        saveRow(rowNameInput.value, rowValueInput.value);
+    if (rowNameInput.value) {
+        saveRow(rowNameInput.value);
     } else {
-        showToast("Please fill all fields");
+        showToast("Please enter a serial number");
     }
 };
 

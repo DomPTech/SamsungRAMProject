@@ -208,6 +208,26 @@
         </div>
     </div>
 
+    <!-- SETTINGS SCREEN -->
+    <div id="settingsScreen" class="hidden fade-in"
+        style="height: 100vh; display: flex; justify-content: center; align-items: center; background: var(--light-bg);">
+        <div class="auth-card">
+            <h2 style="margin-top:0; color: var(--primary);">Server Configuration</h2>
+            <p style="color: #666; font-size: 0.9rem; margin-bottom: 20px;">Enter the local IP address or hostname of
+                your Raspberry Pi.</p>
+
+            <div class="input-group">
+                <label>Server IP / Hostname</label>
+                <input type="text" id="serverIpInput" placeholder="e.g. 192.168.86.32 or raspberrypi.local">
+            </div>
+
+            <button class="btn" style="background: var(--primary); color: white; width: 100%; margin-bottom: 10px;"
+                onclick="saveSettings()">Save & Connect</button>
+            <button class="btn" style="background: transparent; color: #666; width: 100%; border: 1px solid #ddd;"
+                onclick="closeSettings()">Cancel</button>
+        </div>
+    </div>
+
     <div id="dashboard" class="hidden fade-in">
         <div class="topbar">
             <span id="liveTime"></span>
@@ -223,6 +243,8 @@
                 <a onclick="renderPage('faq')">FAQ</a>
             </div>
             <div class="nav-actions">
+                <button class="btn" style="background: #e0e0e0; color: #333; padding: 8px 15px; margin-right: 10px;"
+                    onclick="showSettings()">Settings</button>
                 <button class="btn" style="background: var(--danger); color: white; padding: 8px 15px;"
                     onclick="location.reload()">Logout</button>
             </div>
@@ -255,9 +277,35 @@
             startTime();
         }
 
+        // SETTINGS LOGIC
+        function showSettings() {
+            document.getElementById("dashboard").classList.add("hidden");
+            document.getElementById("settingsScreen").classList.remove("hidden");
+            // Load existing setting or default to empty
+            document.getElementById("serverIpInput").value = localStorage.getItem('pi-server-ip') || '';
+        }
+
+        function saveSettings() {
+            const ip = document.getElementById("serverIpInput").value.trim();
+            if (ip) {
+                localStorage.setItem('pi-server-ip', ip);
+                closeSettings();
+                // If we are saving, we might want to refresh data immediately
+                fetchDentures();
+            } else {
+                alert("Please enter a valid IP address.");
+            }
+        }
+
+        function closeSettings() {
+            document.getElementById("settingsScreen").classList.add("hidden");
+            document.getElementById("dashboard").classList.remove("hidden");
+        }
+
         // CONTENT RENDERER (Functional Pages)
         async function renderPage(page, name = "Staff") {
             const content = document.getElementById("mainContent");
+
 
             if (page === 'home') {
                 content.innerHTML = `
@@ -286,7 +334,8 @@
         }
 
         async function fetchDentures() {
-            const hostname = window.location.hostname || 'localhost';
+            // Use the IP/Hostname provided in settings. Default to 'raspberrypi.local' (Standard mDNS) if not set.
+            const hostname = localStorage.getItem('pi-server-ip') || 'raspberrypi.local';
             const SERVER_URL = `http://${hostname}:5001`;
             try {
                 const response = await fetch(`${SERVER_URL}/api/dentures`);
