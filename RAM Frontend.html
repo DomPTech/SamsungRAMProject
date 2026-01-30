@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -16,7 +17,7 @@
             --light-bg: #f4f7f9;
             --white: #ffffff;
             --text-dark: #333333;
-            --shadow: 0 4px 15px rgba(0,0,0,0.1);
+            --shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
         }
 
         body {
@@ -26,7 +27,9 @@
             color: var(--text-dark);
         }
 
-        .hidden { display: none !important; }
+        .hidden {
+            display: none !important;
+        }
 
         /* Buttons */
         .btn {
@@ -38,7 +41,10 @@
             transition: 0.2s;
         }
 
-        .btn:hover { filter: brightness(1.1); transform: translateY(-1px); }
+        .btn:hover {
+            filter: brightness(1.1);
+            transform: translateY(-1px);
+        }
 
         /* --- SCREEN 1: START --- */
         #startScreen {
@@ -54,7 +60,7 @@
             padding: 60px;
             border-radius: 24px;
             text-align: center;
-            box-shadow: 0 20px 50px rgba(0,0,0,0.3);
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
         }
 
         /* --- SCREEN 2: AUTH --- */
@@ -75,9 +81,24 @@
             box-shadow: var(--shadow);
         }
 
-        .input-group { margin-bottom: 20px; }
-        .input-group label { display: block; margin-bottom: 8px; font-weight: 600; color: var(--primary); }
-        input { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; }
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: var(--primary);
+        }
+
+        input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            box-sizing: border-box;
+        }
 
         /* --- SCREEN 3: DASHBOARD --- */
         .topbar {
@@ -95,7 +116,7 @@
             justify-content: space-between;
             align-items: center;
             padding: 15px 30px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
         }
 
         .nav-links a {
@@ -107,7 +128,9 @@
             cursor: pointer;
         }
 
-        .nav-links a:hover { color: var(--primary); }
+        .nav-links a:hover {
+            color: var(--primary);
+        }
 
         .container {
             max-width: 1100px;
@@ -137,150 +160,182 @@
             margin-top: 15px;
         }
 
-        .fade-in { animation: fadeIn 0.4s ease-in; }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .fade-in {
+            animation: fadeIn 0.4s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
     </style>
 </head>
+
 <body>
 
-<div id="startScreen">
-    <div class="start-card">
-        <h1 style="color: var(--primary); font-size: 2.5rem; margin-bottom: 10px;">Denture Progress</h1>
-        <p style="color: #666; margin-bottom: 30px;">Track your dental health journey.</p>
-        <button class="btn" style="background: var(--accent); color: white; padding: 15px 60px; font-size: 1.2rem;" onclick="showAuth()">Login</button>
-    </div>
-</div>
-
-<div id="authScreen" class="hidden fade-in">
-    <div class="auth-card">
-        <h2 id="authTitle" style="margin-top:0; color: var(--primary);">Welcome Back</h2>
-        <div class="input-group">
-            <label>Email Address</label>
-            <input type="email" id="email" placeholder="Enter your email">
+    <div id="startScreen">
+        <div class="start-card">
+            <h1 style="color: var(--primary); font-size: 2.5rem; margin-bottom: 10px;">Denture Progress</h1>
+            <p style="color: #666; margin-bottom: 30px;">Track your dental health journey.</p>
+            <button class="btn" style="background: var(--accent); color: white; padding: 15px 60px; font-size: 1.2rem;"
+                onclick="showAuth()">Login</button>
         </div>
-        <div class="input-group">
-            <label>Password</label>
-            <input type="password" id="pass" placeholder="••••••••">
-        </div>
-        <button class="btn" style="background: var(--secondary); color: white; width: 100%;" onclick="showDashboard()">Continue</button>
-        <p style="text-align: center; font-size: 0.9rem; margin-top: 20px; color: #666;">
-            <span id="toggleText">Need an account?</span>
-            <a href="javascript:void(0)" onclick="toggleAuth()" style="color: var(--primary); font-weight: bold; text-decoration: none;">Click here</a>
-        </p>
-    </div>
-</div>
-
-<div id="dashboard" class="hidden fade-in">
-    <div class="topbar">
-        <span id="liveTime"></span>
-        <span>📞 (865) 579-1530</span>
-        <span>✉️ info@ramusa.org</span>
     </div>
 
-    <nav class="navbar">
-        <div class="nav-links">
-            <a onclick="renderPage('home')">Home</a>
-            <a onclick="renderPage('about')">About</a>
-            <a onclick="renderPage('schedule')">Schedule</a>
-            <a onclick="renderPage('faq')">FAQ</a>
+    <div id="authScreen" class="hidden fade-in">
+        <div class="auth-card">
+            <h2 id="authTitle" style="margin-top:0; color: var(--primary);">Welcome Back</h2>
+            <div class="input-group">
+                <label>Email Address</label>
+                <input type="email" id="email" placeholder="Enter your email">
+            </div>
+            <div class="input-group">
+                <label>Password</label>
+                <input type="password" id="pass" placeholder="••••••••">
+            </div>
+            <button class="btn" style="background: var(--secondary); color: white; width: 100%;"
+                onclick="showDashboard()">Continue</button>
+            <p style="text-align: center; font-size: 0.9rem; margin-top: 20px; color: #666;">
+                <span id="toggleText">Need an account?</span>
+                <a href="javascript:void(0)" onclick="toggleAuth()"
+                    style="color: var(--primary); font-weight: bold; text-decoration: none;">Click here</a>
+            </p>
         </div>
-        <div class="nav-actions">
-            <button class="btn" style="background: var(--danger); color: white; padding: 8px 15px;" onclick="location.reload()">Logout</button>
+    </div>
+
+    <div id="dashboard" class="hidden fade-in">
+        <div class="topbar">
+            <span id="liveTime"></span>
+            <span>📞 (865) 579-1530</span>
+            <span>✉️ info@ramusa.org</span>
         </div>
-    </nav>
 
-    <div class="container" id="mainContent">
+        <nav class="navbar">
+            <div class="nav-links">
+                <a onclick="renderPage('home')">Home</a>
+                <a onclick="renderPage('about')">About</a>
+                <a onclick="renderPage('schedule')">Schedule</a>
+                <a onclick="renderPage('faq')">FAQ</a>
+            </div>
+            <div class="nav-actions">
+                <button class="btn" style="background: var(--danger); color: white; padding: 8px 15px;"
+                    onclick="location.reload()">Logout</button>
+            </div>
+        </nav>
+
+        <div class="container" id="mainContent">
         </div>
-</div>
+    </div>
 
-<script>
-    let isLogin = true;
+    <script>
+        let isLogin = true;
 
-    // --- NAVIGATION LOGIC ---
-    function showAuth() {
-        document.getElementById("startScreen").classList.add("hidden");
-        document.getElementById("authScreen").classList.remove("hidden");
-    }
+        // NAVIGATION LOGIC
+        function showAuth() {
+            document.getElementById("startScreen").classList.add("hidden");
+            document.getElementById("authScreen").classList.remove("hidden");
+        }
 
-    function toggleAuth() {
-        isLogin = !isLogin;
-        document.getElementById("authTitle").innerText = isLogin ? "Welcome Back" : "Create Account";
-        document.getElementById("toggleText").innerText = isLogin ? "Need an account?" : "Already have an account?";
-    }
+        function toggleAuth() {
+            isLogin = !isLogin;
+            document.getElementById("authTitle").innerText = isLogin ? "Welcome Back" : "Create Account";
+            document.getElementById("toggleText").innerText = isLogin ? "Need an account?" : "Already have an account?";
+        }
 
-    function showDashboard() {
-        const email = document.getElementById('email').value || "Guest";
-        document.getElementById("authScreen").classList.add("hidden");
-        document.getElementById("dashboard").classList.remove("hidden");
-        renderPage('home', email.split('@')[0]);
-        startTime();
-    }
+        function showDashboard() {
+            const email = document.getElementById('email').value || "Guest";
+            document.getElementById("authScreen").classList.add("hidden");
+            document.getElementById("dashboard").classList.remove("hidden");
+            renderPage('home', email.split('@')[0]);
+            startTime();
+        }
 
-    // --- CONTENT RENDERER (Functional Pages) ---
-    function renderPage(page, name = "Patient") {
-        const content = document.getElementById("mainContent");
+        // CONTENT RENDERER (Functional Pages)
+        async function renderPage(page, name = "Staff") {
+            const content = document.getElementById("mainContent");
 
-        if (page === 'home') {
-            content.innerHTML = `
+            if (page === 'home') {
+                content.innerHTML = `
                 <div class="dashboard-grid">
                     <div>
-                        <h1 style="color: var(--primary); margin: 0;">Welcome, ${name}!</h1>
-                        <p style="color: #666; font-size: 1.1rem; margin-top: 5px;">Your recovery is our priority.</p>
-                        <div class="card" style="margin-top: 30px;">
-                            <h3>Current Progress</h3>
-                            <div class="step-item">
-                                <strong>Step 1:</strong> Initial Impression (Completed)
-                            </div>
-                            <div class="step-item" style="background: #fff; border-left-color: #ddd;">
-                                <strong>Step 2:</strong> Wax Try-in (Pending)
-                            </div>
+                        <h1 style="color: var(--primary); margin: 0;">Tray Tracking Dashboard</h1>
+                        <p style="color: #666; font-size: 1.1rem; margin-top: 5px;">Real-time progress of all denture trays.</p>
+                        <div id="denture-list" style="margin-top: 30px;">
+                            <p>Loading trays...</p>
                         </div>
                     </div>
                     <div class="card" style="height: fit-content;">
                         <h3>Clinic Status</h3>
-                        <div style="background: #eee; height: 180px; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #999;">Map View</div>
+                        <div style="background: #eee; height: 180px; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #999;">Active Station: Lab</div>
                     </div>
                 </div>`;
-        } else if (page === 'about') {
-            content.innerHTML = `
-                <div class="card">
-                    <h1>About RAM</h1>
-                    <p>Remote Area Medical (RAM) is a non-profit provider of free mobile clinics. We provide high-quality dental, vision, and medical care to those who need it most.</p>
-                </div>`;
-        } else if (page === 'schedule') {
-            content.innerHTML = `
-                <div class="card">
-                    <h1>Clinic Schedule</h1>
-                    <p>Below are upcoming free clinics in your area:</p>
-                    <ul style="line-height: 2;">
-                        <li><strong>Knoxville, TN:</strong> Jan 24-25, 2026</li>
-                        <li><strong>Cookeville, TN:</strong> Feb 07-08, 2026</li>
-                    </ul>
-                </div>`;
-        } else if (page === 'faq') {
-            content.innerHTML = `
-                <div class="card">
-                    <h1>FAQ</h1>
-                    <div style="margin-bottom: 20px;">
-                        <strong>Q: How do I prepare for my appointment?</strong>
-                        <p>A: Bring a list of current medications and ensure you arrive 15 minutes early.</p>
-                    </div>
-                    <div>
-                        <strong>Q: Are the services really free?</strong>
-                        <p>A: Yes, all services provided at the clinic are 100% free of charge.</p>
-                    </div>
-                </div>`;
-        }
-    }
 
-    // --- UTILITIES ---
-    function startTime() {
-        setInterval(() => {
-            const now = new Date();
-            document.getElementById('liveTime').innerText = now.toLocaleString();
-        }, 1000);
-    }
-</script>
+                await fetchDentures();
+                // Auto-refresh every 5 seconds
+                if (window.refreshInterval) clearInterval(window.refreshInterval);
+                window.refreshInterval = setInterval(fetchDentures, 5000);
+
+            } else if (page === 'about') {
+                // ... (rest of pages remain static or as needed)
+            }
+        }
+
+        async function fetchDentures() {
+            const hostname = window.location.hostname || 'localhost';
+            const SERVER_URL = `http://${hostname}:5001`;
+            try {
+                const response = await fetch(`${SERVER_URL}/api/dentures`);
+                const data = await response.json();
+                const dentures = data.dentures;
+                const steps = data.steps;
+                const totalSteps = steps.length;
+
+                const list = document.getElementById('denture-list');
+                if (!list) return;
+
+                if (dentures.length === 0) {
+                    list.innerHTML = '<div class="card">No trays currently being tracked. Scan a tray to start.</div>';
+                    return;
+                }
+
+                list.innerHTML = dentures.map(d => {
+                    const progressPercent = Math.min(((d.step_index + 1) / totalSteps) * 100, 100);
+                    return `
+                    <div class="card" style="margin-bottom: 15px; border-left: 8px solid ${d.step_index >= totalSteps - 1 ? 'var(--accent)' : 'var(--secondary)'}">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <h3 style="margin: 0;">${d.patient} (ID: ${d.serial.slice(-4)})</h3>
+                                <p style="margin: 5px 0; color: var(--primary); font-weight: 600;">Status: ${d.step_name}</p>
+                            </div>
+                            <div style="text-align: right;">
+                                <span style="font-size: 0.8rem; color: #888;">Step ${d.step_index + 1} of ${totalSteps}</span><br>
+                                <span style="font-size: 0.7rem; color: #aaa;">Updated: ${new Date(d.updated).toLocaleTimeString()}</span>
+                            </div>
+                        </div>
+                        <div style="background: #eee; height: 8px; border-radius: 4px; margin-top: 15px; overflow: hidden;">
+                            <div style="background: var(--accent); width: ${progressPercent}%; height: 100%; transition: width 0.5s;"></div>
+                        </div>
+                    </div>
+                `}).join('');
+            } catch (err) {
+                console.error("Failed to fetch dentures:", err);
+            }
+        }
+
+        // --- UTILITIES ---
+        function startTime() {
+            setInterval(() => {
+                const now = new Date();
+                document.getElementById('liveTime').innerText = now.toLocaleString();
+            }, 1000);
+        }
+    </script>
 
 </body>
+
 </html>

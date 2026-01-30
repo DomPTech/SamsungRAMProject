@@ -1,12 +1,12 @@
 const logContent = document.getElementById('log-content');
 const statusText = document.getElementById('status-text');
 const statusPanel = document.getElementById('support-status');
-const writePanel = document.getElementById('write-panel');
-const nfcInput = document.getElementById('nfc-input');
 const btnRead = document.getElementById('btn-read');
-const btnWrite = document.getElementById('btn-write');
 const btnClearLog = document.getElementById('clear-log');
 const toast = document.getElementById('toast');
+
+const hostname = window.location.hostname || 'localhost';
+const SERVER_URL = `http://${hostname}:5001`;
 
 let activeAction = null; // 'read' or 'write'
 
@@ -68,17 +68,29 @@ btnRead.onclick = async () => {
             showToast('Scan failed');
         };
 
-        ndef.onreading = ({ message, serialNumber }) => {
+        ndef.onreading = async ({ message, serialNumber }) => {
             log(`Tag detected! Serial: ${serialNumber}`, 'success');
-            for (const record of message.records) {
-                if (record.recordType === "text") {
-                    const textDecoder = new TextDecoder(record.encoding);
-                    const text = textDecoder.decode(record.data);
-                    log(`Content: "${text}"`, 'info');
-                    showToast(`Read: ${text}`);
+
+            try {
+                const response = await fetch(`${SERVER_URL}/api/scan`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ serialNumber })
+                });
+
+                const result = await response.json();
+                if (response.ok) {
+                    log(`Server Updated: ${result.step_name} (${result.status})`, 'success');
+                    showToast(`Updated: ${result.step_name}`);
                 } else {
-                    log(`Unknown record type: ${record.recordType}`, 'system');
+                    log(`Server Error: ${result.error}`, 'error');
                 }
+            } catch (err) {
+                log(`Failed to connect to scanner server: ${err.message}`, 'error');
+            }
+
+            for (const record of message.records) {
+                // ... rest of record handling if needed
             }
         };
     } catch (error) {
@@ -119,8 +131,6 @@ nfcInput.oninput = async () => {
 function setActiveAction(action) {
     activeAction = action;
     btnRead.classList.toggle('selected', action === 'read');
-    btnWrite.classList.toggle('selected', action === 'write');
-    if (action !== 'write') writePanel.classList.add('hidden');
 }
 
 btnClearLog.onclick = () => {

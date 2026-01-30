@@ -40,28 +40,17 @@
             <span id="status-text">Checking NFC compatibility...</span>
         </section>
 
-        <div class="action-grid">
-            <div class="card read-card" id="btn-read">
+        <div class="action-grid" style="grid-template-columns: 1fr;">
+            <div class="card read-card" id="btn-read"
+                style="height: 200px; display: flex; flex-direction: column; justify-content: center; align-items: center;">
                 <div class="card-icon">
                     <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <path d="M12 4V20M12 4L8 8M12 4L16 8" stroke="currentColor" stroke-width="2"
                             stroke-linecap="round" stroke-linejoin="round" />
                     </svg>
                 </div>
-                <h3>Read Tag</h3>
-                <p>Scan an existing NFC tag to view its content.</p>
-                <div class="ripple"></div>
-            </div>
-
-            <div class="card write-card" id="btn-write">
-                <div class="card-icon">
-                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M12 20V4M12 20L8 16M12 20L16 16" stroke="currentColor" stroke-width="2"
-                            stroke-linecap="round" stroke-linejoin="round" />
-                    </svg>
-                </div>
-                <h3>Write Tag</h3>
-                <p>Store your custom string into an NFC tag.</p>
+                <h3>Scan Denture Tray</h3>
+                <p>Tap a tray to record progress.</p>
                 <div class="ripple"></div>
             </div>
         </div>
