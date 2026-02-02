@@ -38,7 +38,7 @@ function showToast(message, duration = 3000) {
 // Data Fetching Logic
 async function fetchData() {
     // Port 5001 is the correct port for server.py
-    const url = `http://${currentIp}:5001/api/dentures`;
+    const url = `https://${currentIp}:5001/api/dentures`;
     log(`Connecting to ${url}...`, 'info');
 
     try {
@@ -103,7 +103,7 @@ async function saveRow(serial) {
     log(`Simulating scan for serial: ${serial}...`, 'info');
 
     try {
-        const url = `http://${currentIp}:5001/api/scan`;
+        const url = `https://${currentIp}:5001/api/scan`;
 
         const res = await fetch(url, {
             method: 'POST',
@@ -130,7 +130,7 @@ async function deleteRow(serial) {
     log(`Requesting deletion of #${serial}...`, 'info');
 
     try {
-        const res = await fetch(`http://${currentIp}:5001/api/dentures/${serial}`, { method: 'DELETE' });
+        const res = await fetch(`https://${currentIp}:5001/api/dentures/${serial}`, { method: 'DELETE' });
         if (!res.ok) throw new Error("Server deletion failed");
 
         log(`Deleted #${serial} from Pi`, 'success');
@@ -157,8 +157,8 @@ function closeModal() {
 btnConnect.onclick = () => {
     // Allow user to enter standard IP or IP:PORT
     let inputVal = serverIpInput.value || "raspberrypi.local";
-    // Strip http:// if present
-    inputVal = inputVal.replace('http://', '').replace('https://', '');
+    // Strip https:// if present
+    inputVal = inputVal.replace('https://', '').replace('https://', '');
 
     // If user didn't specify port, we assume they mean the host IP, so we keep it as is.
     // The fetchData function adds :5001. 

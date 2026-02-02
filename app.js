@@ -4,9 +4,52 @@ const statusPanel = document.getElementById('support-status');
 const btnRead = document.getElementById('btn-read');
 const btnClearLog = document.getElementById('clear-log');
 const toast = document.getElementById('toast');
+const serverIpInput = document.getElementById('server-ip');
+const testConnectionBtn = document.getElementById('test-connection');
 
-const hostname = window.location.hostname || 'localhost';
-const SERVER_URL = `http://${hostname}:5001`;
+let SERVER_URL = 'https://192.168.86.32:5001';
+
+// Load saved IP from localStorage
+if (localStorage.getItem('serverIP')) {
+    serverIpInput.value = localStorage.getItem('serverIP');
+    SERVER_URL = `https://${localStorage.getItem('serverIP')}:5001`;
+}
+
+// Update SERVER_URL when IP changes
+serverIpInput.addEventListener('input', () => {
+    const ip = serverIpInput.value.trim();
+    if (ip) {
+        SERVER_URL = `https://${ip}:5001`;
+        localStorage.setItem('serverIP', ip);
+        log(`Server address updated: ${SERVER_URL}`, 'info');
+    }
+});
+
+// Test connection button
+testConnectionBtn.addEventListener('click', async () => {
+    testConnectionBtn.disabled = true;
+    testConnectionBtn.textContent = 'Testing...';
+    log(`Testing connection to ${SERVER_URL}...`, 'info');
+    
+    try {
+        const response = await fetch(`${SERVER_URL}/api/dentures`);
+        if (response.ok) {
+            const data = await response.json();
+            log(`✓ Connection successful! Found ${data.dentures.length} denture(s)`, 'success');
+            showToast('Connection successful!');
+        } else {
+            log(`✗ Server responded with error: ${response.status}`, 'error');
+            showToast('Server error');
+        }
+    } catch (err) {
+        log(`✗ Connection failed: ${err.message}`, 'error');
+        log(`Make sure to visit ${SERVER_URL} in your browser first to accept the certificate`, 'info');
+        showToast('Connection failed - see log');
+    } finally {
+        testConnectionBtn.disabled = false;
+        testConnectionBtn.textContent = 'Test';
+    }
+});
 
 let activeAction = null; // 'read' or 'write'
 

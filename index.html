@@ -40,6 +40,17 @@
             <span id="status-text">Checking NFC compatibility...</span>
         </section>
 
+        <section class="input-section" style="margin-bottom: 1.5rem;">
+            <div class="glass-input-group">
+                <label for="server-ip">Server IP Address</label>
+                <div style="display: flex; gap: 0.5rem;">
+                    <input type="text" id="server-ip" placeholder="192.168.86.32" autocomplete="off" value="192.168.86.32" style="flex: 1;">
+                    <button id="test-connection" style="padding: 0.75rem 1rem; background: #3b82f6; color: white; border: none; border-radius: 8px; cursor: pointer; white-space: nowrap;">Test</button>
+                </div>
+            </div>
+            <div class="hint">Enter the IP address of your Raspberry Pi server. Click Test to verify connection.</div>
+        </section>
+
         <div class="action-grid" style="grid-template-columns: 1fr;">
             <div class="card read-card" id="btn-read"
                 style="height: 200px; display: flex; flex-direction: column; justify-content: center; align-items: center;">

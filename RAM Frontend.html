@@ -336,7 +336,7 @@
         async function fetchDentures() {
             // Use the IP/Hostname provided in settings. Default to 'raspberrypi.local' (Standard mDNS) if not set.
             const hostname = localStorage.getItem('pi-server-ip') || 'raspberrypi.local';
-            const SERVER_URL = `http://${hostname}:5001`;
+            const SERVER_URL = `https://${hostname}:5001`;
             try {
                 const response = await fetch(`${SERVER_URL}/api/dentures`);
                 const data = await response.json();
