@@ -2,6 +2,7 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 import sqlite3
 import os
+import ssl
 
 app = Flask(__name__)
 CORS(app)
@@ -96,5 +97,29 @@ def delete_denture(serial):
 
 if __name__ == '__main__':
     init_db()
-    # Run on All IPs (0.0.0.0) so the phone can find it
-    app.run(host='0.0.0.0', port=5001, debug=True)
+    
+    # Create self-signed SSL context for HTTPS
+    # Note: Browsers will show a warning about self-signed cert
+    # You'll need to accept it once
+    context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+    context.check_hostname = False
+    context.verify_mode = ssl.CERT_NONE
+    
+    # Generate certificate if it doesn't exist
+    cert_file = 'cert.pem'
+    key_file = 'key.pem'
+    
+    if not os.path.exists(cert_file) or not os.path.exists(key_file):
+        print("📝 Generating self-signed certificate...")
+        os.system(f'openssl req -x509 -newkey rsa:4096 -nodes -out {cert_file} -keyout {key_file} -days 365 -subj "/CN=localhost"')
+        print("✅ Certificate generated!\n")
+    
+    context.load_cert_chain(cert_file, key_file)
+    
+    port = 5001
+    print(f"\n🔒 HTTPS Server starting on https://0.0.0.0:{port}")
+    print(f"📱 Access from your network using your computer's IP address")
+    print(f"⚠️  You may need to accept the security warning in your browser\n")
+    
+    # Run on All IPs (0.0.0.0) with HTTPS
+    app.run(host='0.0.0.0', port=port, ssl_context=context, debug=True)
