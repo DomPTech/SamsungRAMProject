@@ -3,94 +3,344 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>NFC Nexus | Read & Write</title>
-    <link rel="stylesheet" href="style.css">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
-    <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#0f172a">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Denture Progress | RAM</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --primary: #2f5d8a;
+            --primary-dark: #1f3c88;
+            --secondary: #248E9C;
+            --accent: #6ea235;
+            --danger: #c62828;
+            --light-bg: #f4f7f9;
+            --white: #ffffff;
+            --text-dark: #333333;
+            --shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        body {
+            margin: 0;
+            font-family: 'Inter', sans-serif;
+            background: var(--light-bg);
+            color: var(--text-dark);
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        /* Buttons */
+        .btn {
+            border: none;
+            border-radius: 8px;
+            padding: 12px 24px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .btn:hover {
+            filter: brightness(1.1);
+            transform: translateY(-1px);
+        }
+
+        /* --- SCREEN 1: START --- */
+        #startScreen {
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+        }
+
+        .start-card {
+            background: white;
+            padding: 60px;
+            border-radius: 24px;
+            text-align: center;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+        }
+
+        /* --- SCREEN 2: AUTH --- */
+        #authScreen {
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: var(--light-bg);
+        }
+
+        .auth-card {
+            background: white;
+            width: 100%;
+            max-width: 400px;
+            padding: 40px;
+            border-radius: 16px;
+            box-shadow: var(--shadow);
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: var(--primary);
+        }
+
+        input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            box-sizing: border-box;
+        }
+
+        /* --- SCREEN 3: DASHBOARD --- */
+        .topbar {
+            background: var(--primary-dark);
+            color: white;
+            padding: 8px 30px;
+            font-size: 13px;
+            display: flex;
+            gap: 20px;
+        }
+
+        .navbar {
+            background: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 30px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+        }
+
+        .nav-links a {
+            margin-right: 20px;
+            text-decoration: none;
+            color: #666;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+        }
+
+        .nav-links a:hover {
+            color: var(--primary);
+        }
+
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 1fr 350px;
+            gap: 30px;
+        }
+
+        .card {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+            margin-bottom: 20px;
+        }
+
+        .step-item {
+            padding: 15px;
+            background: #f0f7ff;
+            border-left: 5px solid var(--secondary);
+            border-radius: 4px;
+            margin-top: 15px;
+        }
+
+        .fade-in {
+            animation: fadeIn 0.4s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+    </style>
 </head>
 
 <body>
-    <div class="background-blobs">
-        <div class="blob blob-1"></div>
-        <div class="blob blob-2"></div>
-        <div class="blob blob-3"></div>
+
+    <!-- SETTINGS SCREEN -->
+    <div id="settingsScreen" class="hidden fade-in"
+        style="height: 100vh; display: flex; justify-content: center; align-items: center; background: var(--light-bg);">
+        <div class="auth-card">
+            <h2 style="margin-top:0; color: var(--primary);">Server Configuration</h2>
+            <p style="color: #666; font-size: 0.9rem; margin-bottom: 20px;">Enter the local IP address or hostname of
+                your Raspberry Pi.</p>
+
+            <div class="input-group">
+                <label>Server IP / Hostname</label>
+                <input type="text" id="serverIpInput" placeholder="e.g. 192.168.86.32 or raspberrypi.local">
+            </div>
+
+            <button class="btn" style="background: var(--primary); color: white; width: 100%; margin-bottom: 10px;"
+                onclick="saveSettings()">Save & Connect</button>
+            <button class="btn" style="background: transparent; color: #666; width: 100%; border: 1px solid #ddd;"
+                onclick="closeSettings()">Cancel</button>
+        </div>
     </div>
 
-    <main class="app-container">
-        <header>
-            <div class="logo">
-                <div class="logo-icon">
-                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path
-                            d="M20 12C20 16.4183 16.4183 20 12 20M20 12C20 7.58172 16.4183 4 12 4M20 12H22M12 20C7.58172 20 4 16.4183 4 12M12 20V22M4 12C4 7.58172 7.58172 4 12 4M4 12H2M12 4V2M15 12C15 13.6569 13.6569 15 12 15C10.3431 15 9 13.6569 9 12C9 10.3431 10.3431 9 12 9C13.6569 9 15 10.3431 15 12Z"
-                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-                    </svg>
-                </div>
-                <h1>NFC NEXUS</h1>
-            </div>
-            <p class="subtitle">Seamless Tag Interaction</p>
-        </header>
-
-        <section class="status-panel" id="support-status">
-            <div class="status-indicator"></div>
-            <span id="status-text">Checking NFC compatibility...</span>
-        </section>
-
-        <section class="input-section" style="margin-bottom: 1.5rem;">
-            <div class="glass-input-group">
-                <label for="server-ip">Server IP Address</label>
-                <div style="display: flex; gap: 0.5rem;">
-                    <input type="text" id="server-ip" placeholder="192.168.86.32" autocomplete="off" value="192.168.86.32" style="flex: 1;">
-                    <button id="test-connection" style="padding: 0.75rem 1rem; background: #3b82f6; color: white; border: none; border-radius: 8px; cursor: pointer; white-space: nowrap;">Test</button>
-                </div>
-            </div>
-            <div class="hint">Enter the IP address of your Raspberry Pi server. Click Test to verify connection.</div>
-        </section>
-
-        <div class="action-grid" style="grid-template-columns: 1fr;">
-            <div class="card read-card" id="btn-read"
-                style="height: 200px; display: flex; flex-direction: column; justify-content: center; align-items: center;">
-                <div class="card-icon">
-                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M12 4V20M12 4L8 8M12 4L16 8" stroke="currentColor" stroke-width="2"
-                            stroke-linecap="round" stroke-linejoin="round" />
-                    </svg>
-                </div>
-                <h3>Scan Denture Tray</h3>
-                <p>Tap a tray to record progress.</p>
-                <div class="ripple"></div>
-            </div>
+    <div id="dashboard" class="fade-in">
+        <div class="topbar">
+            <span id="liveTime"></span>
+            <span>📞 (865) 579-1530</span>
+            <span>✉️ info@ramusa.org</span>
         </div>
 
-        <section class="input-section hidden" id="write-panel">
-            <div class="glass-input-group">
-                <label for="nfc-input">Content to Write</label>
-                <input type="text" id="nfc-input" placeholder="Enter text here..." autocomplete="off">
+        <nav class="navbar">
+            <div class="nav-links">
+                <a onclick="renderPage('home')">Home</a>
+                <a onclick="renderPage('about')">About</a>
+                <a onclick="renderPage('schedule')">Schedule</a>
+                <a onclick="renderPage('faq')">FAQ</a>
             </div>
-            <div class="hint">Tap your phone to a tag after clicking Write</div>
-        </section>
-
-        <section class="log-section">
-            <div class="log-header">
-                <h3>Activity Log</h3>
-                <button id="clear-log">Clear</button>
+            <div class="nav-actions">
+                <button class="btn" style="background: #e0e0e0; color: #333; padding: 8px 15px; margin-right: 10px;"
+                    onclick="showSettings()">Settings</button>
+                <a href="scanner.html" class="btn" style="background: var(--accent); color: white; padding: 8px 15px; text-decoration: none;">Open Scanner</a>
             </div>
-            <div id="log-content" class="log-content">
-                <div class="log-entry system">Ready to connect.</div>
-            </div>
-        </section>
-        <center>
-            <a href="server_test.html" class="nav-link">Access Pi Server Management</a>
-        </center>
-    </main>
+        </nav>
 
-    <div id="toast" class="toast hidden"></div>
+        <div class="container" id="mainContent">
+        </div>
+    </div>
 
-    <script src="app.js"></script>
+    <script>
+        // NAVIGATION LOGIC
+        // Automatically Initialize Dashboard
+        window.onload = function() {
+             // Check if IP is set, if not, show settings? Or just default to dashboard.
+             // Let's just load the dashboard and maybe pop settings if needed, but for now just load dashboard.
+             renderPage('home');
+             startTime();
+        };
+
+        // SETTINGS LOGIC
+        function showSettings() {
+            document.getElementById("dashboard").classList.add("hidden");
+            document.getElementById("settingsScreen").classList.remove("hidden");
+            // Load existing setting or default to empty
+            document.getElementById("serverIpInput").value = localStorage.getItem('pi-server-ip') || '';
+        }
+
+        function saveSettings() {
+            const ip = document.getElementById("serverIpInput").value.trim();
+            if (ip) {
+                localStorage.setItem('pi-server-ip', ip);
+                closeSettings();
+                // If we are saving, we might want to refresh data immediately
+                fetchDentures();
+            } else {
+                alert("Please enter a valid IP address.");
+            }
+        }
+
+        function closeSettings() {
+            document.getElementById("settingsScreen").classList.add("hidden");
+            document.getElementById("dashboard").classList.remove("hidden");
+        }
+
+        // CONTENT RENDERER (Functional Pages)
+        async function renderPage(page, name = "Staff") {
+            const content = document.getElementById("mainContent");
+
+
+            if (page === 'home') {
+                content.innerHTML = `
+                <div class="dashboard-grid">
+                    <div>
+                        <h1 style="color: var(--primary); margin: 0;">Tray Tracking Dashboard</h1>
+                        <p style="color: #666; font-size: 1.1rem; margin-top: 5px;">Real-time progress of all denture trays.</p>
+                        <div id="denture-list" style="margin-top: 30px;">
+                            <p>Loading trays...</p>
+                        </div>
+                    </div>
+                    <div class="card" style="height: fit-content;">
+                        <h3>Clinic Status</h3>
+                        <div style="background: #eee; height: 180px; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #999;">Active Station: Lab</div>
+                    </div>
+                </div>`;
+
+                await fetchDentures();
+                // Auto-refresh every 5 seconds
+                if (window.refreshInterval) clearInterval(window.refreshInterval);
+                window.refreshInterval = setInterval(fetchDentures, 5000);
+
+            } else if (page === 'about') {
+                // ... (rest of pages remain static or as needed)
+            }
+        }
+
+        async function fetchDentures() {
+            // Use the IP/Hostname provided in settings. Default to 'raspberrypi.local' (Standard mDNS) if not set.
+            const hostname = localStorage.getItem('pi-server-ip') || 'raspberrypi.local';
+            const SERVER_URL = `https://${hostname}:5001`;
+            try {
+                const response = await fetch(`${SERVER_URL}/api/dentures`);
+                const data = await response.json();
+                const dentures = data.dentures;
+                const steps = data.steps;
+                const totalSteps = steps.length;
+
+                const list = document.getElementById('denture-list');
+                if (!list) return;
+
+                if (dentures.length === 0) {
+                    list.innerHTML = '<div class="card">No trays currently being tracked. Scan a tray to start.</div>';
+                    return;
+                }
+
+                list.innerHTML = dentures.map(d => {
+                    const progressPercent = Math.min(((d.step_index + 1) / totalSteps) * 100, 100);
+                    return `
+                    <div class="card" style="margin-bottom: 15px; border-left: 8px solid ${d.step_index >= totalSteps - 1 ? 'var(--accent)' : 'var(--secondary)'}">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <h3 style="margin: 0;">${d.patient} (ID: ${d.serial.slice(-4)})</h3>
+                                <p style="margin: 5px 0; color: var(--primary); font-weight: 600;">Status: ${d.step_name}</p>
+                            </div>
+                            <div style="text-align: right;">
+                                <span style="font-size: 0.8rem; color: #888;">Step ${d.step_index + 1} of ${totalSteps}</span><br>
+                                <span style="font-size: 0.7rem; color: #aaa;">Updated: ${new Date(d.updated).toLocaleTimeString()}</span>
+                            </div>
+                        </div>
+                        <div style="background: #eee; height: 8px; border-radius: 4px; margin-top: 15px; overflow: hidden;">
+                            <div style="background: var(--accent); width: ${progressPercent}%; height: 100%; transition: width 0.5s;"></div>
+                        </div>
+                    </div>
+                `}).join('');
+            } catch (err) {
+                console.error("Failed to fetch dentures:", err);
+            }
+        }
+
+        // --- UTILITIES ---
+        function startTime() {
+            setInterval(() => {
+                const now = new Date();
+                document.getElementById('liveTime').innerText = now.toLocaleString();
+            }, 1000);
+        }
+    </script>
+
 </body>
 
 </html>

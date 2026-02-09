@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>NFC Nexus | Read & Write</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0f172a">
+</head>
+
+<body>
+    <div class="background-blobs">
+        <div class="blob blob-1"></div>
+        <div class="blob blob-2"></div>
+        <div class="blob blob-3"></div>
+    </div>
+
+    <main class="app-container">
+        <header>
+            <div class="logo">
+                <div class="logo-icon">
+                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path
+                            d="M20 12C20 16.4183 16.4183 20 12 20M20 12C20 7.58172 16.4183 4 12 4M20 12H22M12 20C7.58172 20 4 16.4183 4 12M12 20V22M4 12C4 7.58172 7.58172 4 12 4M4 12H2M12 4V2M15 12C15 13.6569 13.6569 15 12 15C10.3431 15 9 13.6569 9 12C9 10.3431 10.3431 9 12 9C13.6569 9 15 10.3431 15 12Z"
+                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                    </svg>
+                </div>
+                <h1>NFC NEXUS</h1>
+            </div>
+            <p class="subtitle">Seamless Tag Interaction</p>
+        </header>
+
+        <section class="status-panel" id="support-status">
+            <div class="status-indicator"></div>
+            <span id="status-text">Checking NFC compatibility...</span>
+        </section>
+
+        <section class="input-section" style="margin-bottom: 1.5rem;">
+            <div class="glass-input-group">
+                <label for="server-ip">Server IP Address</label>
+                <div style="display: flex; gap: 0.5rem;">
+                    <input type="text" id="server-ip" placeholder="192.168.86.32" autocomplete="off" value="192.168.86.32" style="flex: 1;">
+                    <button id="test-connection" style="padding: 0.75rem 1rem; background: #3b82f6; color: white; border: none; border-radius: 8px; cursor: pointer; white-space: nowrap;">Test</button>
+                </div>
+            </div>
+            <div class="hint">Enter the IP address of your Raspberry Pi server. Click Test to verify connection.</div>
+        </section>
+
+        <div class="action-grid" style="grid-template-columns: 1fr;">
+            <div class="card read-card" id="btn-read"
+                style="height: 200px; display: flex; flex-direction: column; justify-content: center; align-items: center;">
+                <div class="card-icon">
+                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M12 4V20M12 4L8 8M12 4L16 8" stroke="currentColor" stroke-width="2"
+                            stroke-linecap="round" stroke-linejoin="round" />
+                    </svg>
+                </div>
+                <h3>Scan Denture Tray</h3>
+                <p>Tap a tray to record progress.</p>
+                <div class="ripple"></div>
+            </div>
+        </div>
+
+        <section class="input-section hidden" id="write-panel">
+            <div class="glass-input-group">
+                <label for="nfc-input">Content to Write</label>
+                <input type="text" id="nfc-input" placeholder="Enter text here..." autocomplete="off">
+            </div>
+            <div class="hint">Tap your phone to a tag after clicking Write</div>
+        </section>
+
+        <section class="log-section">
+            <div class="log-header">
+                <h3>Activity Log</h3>
+                <button id="clear-log">Clear</button>
+            </div>
+            <div id="log-content" class="log-content">
+                <div class="log-entry system">Ready to connect.</div>
+            </div>
+        </section>
+        <center>
+            <a href="index.html" class="nav-link">Back to Dashboard</a>
+        </center>
+    </main>
+
+    <div id="toast" class="toast hidden"></div>
+
+    <script src="app.js"></script>
+</body>
+
+</html>
