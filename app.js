@@ -36,6 +36,10 @@ testConnectionBtn.addEventListener('click', async () => {
         if (response.ok) {
             const data = await response.json();
             log(`✓ Connection successful! Found ${data.dentures.length} denture(s)`, 'success');
+            if (data.steps) {
+                const names = data.steps.map(s => s.name || s).join(', ');
+                log(`Stages: ${names}`, 'info');
+            }
             showToast('Connection successful!');
         } else {
             log(`✗ Server responded with error: ${response.status}`, 'error');
@@ -63,7 +67,24 @@ window.addEventListener('load', () => {
             .then(() => console.log('Service Worker Registered'))
             .catch(err => console.error('SW Registration Failed', err));
     }
+    // Load stages from server for client-side UI
+    fetchStages();
 });
+
+async function fetchStages() {
+    try {
+        const resp = await fetch(`${SERVER_URL}/api/stages`);
+        if (resp.ok) {
+            const data = await resp.json();
+            window.STAGES = data.stages || [];
+            log(`Loaded ${window.STAGES.length} stage(s) from server`, 'info');
+        } else {
+            log('Failed to load stages from server', 'error');
+        }
+    } catch (err) {
+        log(`Error fetching stages: ${err.message}`, 'error');
+    }
+}
 
 function log(message, type = 'system') {
     const entry = document.createElement('div');
@@ -79,6 +100,170 @@ function showToast(message, duration = 3000) {
     setTimeout(() => {
         toast.classList.add('hidden');
     }, duration);
+}
+
+function getServerUrl() {
+    const hostname = localStorage.getItem('pi-server-ip') || localStorage.getItem('serverIP') || 'raspberrypi.local';
+    return `https://${hostname}:5001`;
+}
+
+function openAdmin() {
+    const modal = document.getElementById('adminModal');
+    if (!modal) return;
+    modal.classList.remove('hidden');
+    const token = localStorage.getItem('admin_token');
+    if (token) {
+        document.getElementById('adminLoginForm').classList.add('hidden');
+        document.getElementById('adminPanel').classList.remove('hidden');
+        document.getElementById('adminLogoutBtn').classList.remove('hidden');
+        fetchStagesAdmin();
+    } else {
+        document.getElementById('adminLoginForm').classList.remove('hidden');
+        document.getElementById('adminPanel').classList.add('hidden');
+    }
+}
+
+function closeAdmin() {
+    const modal = document.getElementById('adminModal');
+    if (!modal) return;
+    modal.classList.add('hidden');
+}
+
+async function adminLogin() {
+    const usernameEl = document.getElementById('adminUser');
+    const passwordEl = document.getElementById('adminPass');
+    if (!usernameEl || !passwordEl) return alert('Admin inputs not found');
+    const username = usernameEl.value.trim();
+    const password = passwordEl.value;
+    if (!username || !password) return alert('Enter username and password');
+
+    try {
+        const resp = await fetch(`${getServerUrl()}/api/auth/login`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, password })
+        });
+        const data = await resp.json();
+        if (!resp.ok) return alert(data.error || 'Login failed');
+        localStorage.setItem('admin_token', data.token);
+        document.getElementById('adminLoginForm').classList.add('hidden');
+        document.getElementById('adminPanel').classList.remove('hidden');
+        document.getElementById('adminLogoutBtn').classList.remove('hidden');
+        fetchStagesAdmin();
+    } catch (err) {
+        console.error('Login error', err);
+        alert('Login failed');
+    }
+}
+
+function adminLogout() {
+    localStorage.removeItem('admin_token');
+    document.getElementById('adminPanel').classList.add('hidden');
+    document.getElementById('adminLoginForm').classList.remove('hidden');
+    document.getElementById('adminLogoutBtn').classList.add('hidden');
+}
+
+async function fetchStagesAdmin() {
+    try {
+        const resp = await fetch(`${getServerUrl()}/api/stages`);
+        if (!resp.ok) throw new Error('Failed to fetch stages');
+        const data = await resp.json();
+        renderStagesAdmin(data.stages || []);
+    } catch (err) {
+        console.error('fetchStagesAdmin', err);
+        alert('Unable to load stages from server');
+    }
+}
+
+function renderStagesAdmin(stages) {
+    const container = document.getElementById('adminStagesList');
+    if (!container) return;
+    container.innerHTML = '';
+    if (!stages.length) {
+        container.innerHTML = '<div style="color:#666;">No stages configured.</div>';
+        return;
+    }
+    stages.forEach(s => {
+        const el = document.createElement('div');
+        el.style.display = 'flex';
+        el.style.alignItems = 'center';
+        el.style.gap = '8px';
+        el.style.padding = '8px';
+        el.style.borderBottom = '1px solid #eee';
+
+        const nameInput = document.createElement('input');
+        nameInput.value = s.name;
+        nameInput.style.flex = '1';
+        nameInput.style.padding = '8px';
+
+        const saveBtn = document.createElement('button');
+        saveBtn.className = 'btn';
+        saveBtn.textContent = 'Save';
+        saveBtn.onclick = () => updateStageAdmin(s.id, nameInput.value, s.ordering);
+
+        const delBtn = document.createElement('button');
+        delBtn.className = 'btn';
+        delBtn.style.background = 'transparent';
+        delBtn.style.border = '1px solid #ddd';
+        delBtn.textContent = 'Delete';
+        delBtn.onclick = () => { if (confirm('Delete this stage?')) deleteStageAdmin(s.id); };
+
+        el.appendChild(nameInput);
+        el.appendChild(saveBtn);
+        el.appendChild(delBtn);
+        container.appendChild(el);
+    });
+}
+
+async function createStageAdmin() {
+    const nameEl = document.getElementById('newStageName');
+    if (!nameEl) return alert('New stage input not found');
+    const name = nameEl.value.trim();
+    if (!name) return alert('Enter a stage name');
+    const token = localStorage.getItem('admin_token');
+    try {
+        const resp = await fetch(`${getServerUrl()}/api/stages`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify({ name })
+        });
+        const data = await resp.json();
+        if (!resp.ok) return alert(data.error || 'Failed to create');
+        nameEl.value = '';
+        renderStagesAdmin(data.stages || []);
+    } catch (err) {
+        console.error('createStageAdmin', err);
+        alert('Failed to create stage');
+    }
+}
+
+async function updateStageAdmin(id, name, ordering) {
+    const token = localStorage.getItem('admin_token');
+    try {
+        const resp = await fetch(`${getServerUrl()}/api/stages/${id}`, {
+            method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify({ name })
+        });
+        const data = await resp.json();
+        if (!resp.ok) return alert(data.error || 'Failed to update');
+        renderStagesAdmin(data.stages || []);
+    } catch (err) {
+        console.error('updateStageAdmin', err);
+        alert('Failed to update stage');
+    }
+}
+
+async function deleteStageAdmin(id) {
+    const token = localStorage.getItem('admin_token');
+    try {
+        const resp = await fetch(`${getServerUrl()}/api/stages/${id}`, {
+            method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await resp.json();
+        if (!resp.ok) return alert(data.error || 'Failed to delete');
+        renderStagesAdmin(data.stages || []);
+    } catch (err) {
+        console.error('deleteStageAdmin', err);
+        alert('Failed to delete stage');
+    }
 }
 
 async function checkNFCSupport() {
@@ -133,7 +318,7 @@ btnRead.onclick = async () => {
             }
 
             for (const record of message.records) {
-                // ... rest of record handling if needed
+                // TODO: rest of record handling
             }
         };
     } catch (error) {

@@ -46,7 +46,6 @@
             transform: translateY(-1px);
         }
 
-        /* --- SCREEN 1: START --- */
         #startScreen {
             height: 100vh;
             display: flex;
@@ -63,7 +62,6 @@
             box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
         }
 
-        /* --- SCREEN 2: AUTH --- */
         #authScreen {
             height: 100vh;
             display: flex;
@@ -177,8 +175,6 @@
 </head>
 
 <body>
-
-    <!-- SETTINGS SCREEN -->
     <div id="settingsScreen" class="hidden fade-in"
         style="height: 100vh; display: flex; justify-content: center; align-items: center; background: var(--light-bg);">
         <div class="auth-card">
@@ -215,6 +211,7 @@
             <div class="nav-actions">
                 <button class="btn" style="background: #e0e0e0; color: #333; padding: 8px 15px; margin-right: 10px;"
                     onclick="showSettings()">Settings</button>
+                <button class="btn" style="background: #fff; color: var(--primary); border: 1px solid #ddd; padding: 8px 15px; margin-right: 10px;" onclick="openAdmin()">Admin</button>
                 <a href="scanner.html" class="btn" style="background: var(--accent); color: white; padding: 8px 15px; text-decoration: none;">Open Scanner</a>
             </div>
         </nav>
@@ -223,21 +220,54 @@
         </div>
     </div>
 
+    <div id="adminModal" class="hidden" style="position:fixed; inset:0; display:flex; align-items:center; justify-content:center; background: rgba(0,0,0,0.4); z-index:50;">
+        <div class="auth-card" style="width:720px; max-width:95%;">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <h2 style="margin:0; color:var(--primary);">Admin Console</h2>
+                <div>
+                    <button class="btn" style="background:#e0e0e0; color:#333; margin-right:8px;" onclick="closeAdmin()">Close</button>
+                    <button id="adminLogoutBtn" class="btn hidden" style="background:#f44336; color:white;" onclick="adminLogout()">Logout</button>
+                </div>
+            </div>
+
+            <div id="adminLoginForm" style="margin-top:18px;">
+                <p style="color:#666;">Sign in to manage stages and queue.</p>
+                <div class="input-group">
+                    <label>Username</label>
+                    <input id="adminUser" type="text" />
+                </div>
+                <div class="input-group">
+                    <label>Password</label>
+                    <input id="adminPass" type="password" />
+                </div>
+                <div style="display:flex; gap:10px;">
+                    <button class="btn" style="background:var(--primary); color:white;" onclick="adminLogin()">Sign In</button>
+                    <button class="btn" style="background:transparent; border:1px solid #ddd;" onclick="closeAdmin()">Cancel</button>
+                </div>
+            </div>
+
+            <div id="adminPanel" class="hidden" style="margin-top:16px;">
+                <h3 style="margin-top:0;">Stages</h3>
+                <div id="adminStagesList" style="max-height:260px; overflow:auto; margin-bottom:12px;"></div>
+
+                <div style="display:flex; gap:8px; align-items:center;">
+                    <input id="newStageName" placeholder="New stage name" style="flex:1;padding:10px;border:1px solid #ddd;border-radius:8px;" />
+                    <button class="btn" style="background:var(--accent); color:white;" onclick="createStageAdmin()">Add</button>
+                </div>
+                <p style="color:#777; font-size:0.9rem; margin-top:12px;">Stage order determines progress flow. Use edit/delete to manage.</p>
+            </div>
+        </div>
+    </div>
+
     <script>
-        // NAVIGATION LOGIC
-        // Automatically Initialize Dashboard
         window.onload = function() {
-             // Check if IP is set, if not, show settings? Or just default to dashboard.
-             // Let's just load the dashboard and maybe pop settings if needed, but for now just load dashboard.
              renderPage('home');
              startTime();
         };
 
-        // SETTINGS LOGIC
         function showSettings() {
             document.getElementById("dashboard").classList.add("hidden");
             document.getElementById("settingsScreen").classList.remove("hidden");
-            // Load existing setting or default to empty
             document.getElementById("serverIpInput").value = localStorage.getItem('pi-server-ip') || '';
         }
 
@@ -246,7 +276,6 @@
             if (ip) {
                 localStorage.setItem('pi-server-ip', ip);
                 closeSettings();
-                // If we are saving, we might want to refresh data immediately
                 fetchDentures();
             } else {
                 alert("Please enter a valid IP address.");
@@ -258,10 +287,8 @@
             document.getElementById("dashboard").classList.remove("hidden");
         }
 
-        // CONTENT RENDERER (Functional Pages)
         async function renderPage(page, name = "Staff") {
             const content = document.getElementById("mainContent");
-
 
             if (page === 'home') {
                 content.innerHTML = `
@@ -285,12 +312,10 @@
                 window.refreshInterval = setInterval(fetchDentures, 5000);
 
             } else if (page === 'about') {
-                // ... (rest of pages remain static or as needed)
             }
         }
 
         async function fetchDentures() {
-            // Use the IP/Hostname provided in settings. Default to 'raspberrypi.local' (Standard mDNS) if not set.
             const hostname = localStorage.getItem('pi-server-ip') || 'raspberrypi.local';
             const SERVER_URL = `https://${hostname}:5001`;
             try {
@@ -332,7 +357,6 @@
             }
         }
 
-        // --- UTILITIES ---
         function startTime() {
             setInterval(() => {
                 const now = new Date();
