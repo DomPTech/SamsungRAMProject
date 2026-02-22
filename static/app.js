@@ -4,60 +4,9 @@ const statusPanel = document.getElementById('support-status');
 const btnRead = document.getElementById('btn-read');
 const btnClearLog = document.getElementById('clear-log');
 const toast = document.getElementById('toast');
-const serverIpInput = document.getElementById('server-ip');
-const testConnectionBtn = document.getElementById('test-connection');
-
-let SERVER_URL = 'https://192.168.86.32:5001';
-
-// Load saved IP from localStorage
-if (localStorage.getItem('serverIP')) {
-    serverIpInput.value = localStorage.getItem('serverIP');
-    SERVER_URL = `https://${localStorage.getItem('serverIP')}:5001`;
-}
-
-// Update SERVER_URL when IP changes
-serverIpInput.addEventListener('input', () => {
-    const ip = serverIpInput.value.trim();
-    if (ip) {
-        SERVER_URL = `https://${ip}:5001`;
-        localStorage.setItem('serverIP', ip);
-        log(`Server address updated: ${SERVER_URL}`, 'info');
-    }
-});
-
-// Test connection button
-testConnectionBtn.addEventListener('click', async () => {
-    testConnectionBtn.disabled = true;
-    testConnectionBtn.textContent = 'Testing...';
-    log(`Testing connection to ${SERVER_URL}...`, 'info');
-    
-    try {
-        const response = await fetch(`${SERVER_URL}/api/dentures`);
-        if (response.ok) {
-            const data = await response.json();
-            log(`✓ Connection successful! Found ${data.dentures.length} denture(s)`, 'success');
-            if (data.steps) {
-                const names = data.steps.map(s => s.name || s).join(', ');
-                log(`Stages: ${names}`, 'info');
-            }
-            showToast('Connection successful!');
-        } else {
-            log(`✗ Server responded with error: ${response.status}`, 'error');
-            showToast('Server error');
-        }
-    } catch (err) {
-        log(`✗ Connection failed: ${err.message}`, 'error');
-        log(`Make sure to visit ${SERVER_URL} in your browser first to accept the certificate`, 'info');
-        showToast('Connection failed - see log');
-    } finally {
-        testConnectionBtn.disabled = false;
-        testConnectionBtn.textContent = 'Test';
-    }
-});
 
 let activeAction = null; // 'read' or 'write'
 
-// Initialize
 window.addEventListener('load', () => {
     checkNFCSupport();
 
@@ -73,7 +22,7 @@ window.addEventListener('load', () => {
 
 async function fetchStages() {
     try {
-        const resp = await fetch(`${SERVER_URL}/api/stages`);
+        const resp = await fetch('/api/stages');
         if (resp.ok) {
             const data = await resp.json();
             window.STAGES = data.stages || [];
@@ -102,10 +51,7 @@ function showToast(message, duration = 3000) {
     }, duration);
 }
 
-function getServerUrl() {
-    const hostname = localStorage.getItem('pi-server-ip') || localStorage.getItem('serverIP') || 'raspberrypi.local';
-    return `https://${hostname}:5001`;
-}
+// Using origin-relative endpoints for API calls (e.g. `/api/...`)
 
 function openAdmin() {
     const modal = document.getElementById('adminModal');
@@ -138,7 +84,7 @@ async function adminLogin() {
     if (!username || !password) return alert('Enter username and password');
 
     try {
-        const resp = await fetch(`${getServerUrl()}/api/auth/login`, {
+        const resp = await fetch('/api/auth/login', {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ username, password })
         });
@@ -164,7 +110,7 @@ function adminLogout() {
 
 async function fetchStagesAdmin() {
     try {
-        const resp = await fetch(`${getServerUrl()}/api/stages`);
+        const resp = await fetch('/api/stages');
         if (!resp.ok) throw new Error('Failed to fetch stages');
         const data = await resp.json();
         renderStagesAdmin(data.stages || []);
@@ -221,7 +167,7 @@ async function createStageAdmin() {
     if (!name) return alert('Enter a stage name');
     const token = localStorage.getItem('admin_token');
     try {
-        const resp = await fetch(`${getServerUrl()}/api/stages`, {
+        const resp = await fetch('/api/stages', {
             method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
             body: JSON.stringify({ name })
         });
@@ -238,7 +184,7 @@ async function createStageAdmin() {
 async function updateStageAdmin(id, name, ordering) {
     const token = localStorage.getItem('admin_token');
     try {
-        const resp = await fetch(`${getServerUrl()}/api/stages/${id}`, {
+        const resp = await fetch(`/api/stages/${id}`, {
             method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
             body: JSON.stringify({ name })
         });
@@ -254,7 +200,7 @@ async function updateStageAdmin(id, name, ordering) {
 async function deleteStageAdmin(id) {
     const token = localStorage.getItem('admin_token');
     try {
-        const resp = await fetch(`${getServerUrl()}/api/stages/${id}`, {
+        const resp = await fetch(`/api/stages/${id}`, {
             method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` }
         });
         const data = await resp.json();
@@ -300,7 +246,7 @@ btnRead.onclick = async () => {
             log(`Tag detected! Serial: ${serialNumber}`, 'success');
 
             try {
-                const response = await fetch(`${SERVER_URL}/api/scan`, {
+                const response = await fetch('/api/scan', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ serialNumber })

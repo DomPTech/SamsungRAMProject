@@ -8,7 +8,7 @@ import jwt
 import datetime
 from functools import wraps
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder='static', static_url_path='')
 CORS(app)
 
 DB_PATH = os.environ.get('DATABASE_PATH', 'database.db')
@@ -168,6 +168,18 @@ def list_stages():
     stages = get_stages_from_db(conn)
     conn.close()
     return jsonify({'stages': stages})
+
+
+# Serve static files (index.html and other assets) from repo root
+@app.route('/', defaults={'path': ''})
+@app.route('/<path:path>')
+def serve_static(path):
+    if path == '':
+        path = 'index.html'
+    try:
+        return app.send_static_file(path)
+    except Exception:
+        return jsonify({'error': 'Not found'}), 404
 
 
 @app.route('/api/stages', methods=['POST'])

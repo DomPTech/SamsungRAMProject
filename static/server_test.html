@@ -48,10 +48,9 @@
         <section class="config-section">
             <div class="config-group">
                 <div class="glass-input-group">
-                    <label for="server-ip">Pi IP Address</label>
-                    <input type="text" id="server-ip" placeholder="e.g., 192.168.1.100" value="localhost">
+                    <label>Server</label>
+                    <div style="padding:12px; border-radius:8px; background:rgba(255,255,255,0.03); color:var(--text-dim);">Using same-origin API (no manual IP required)</div>
                 </div>
-                <button class="btn" id="btn-connect">Connect</button>
             </div>
         </section>
 
@@ -90,7 +89,7 @@
                 <button id="clear-log">Clear</button>
             </div>
             <div id="log-content" class="log-content">
-                <div class="log-entry system">Initialize server connection parameters.</div>
+                <div class="log-entry system">Initializing — attempting to connect to API...</div>
             </div>
         </section>
     </main>
