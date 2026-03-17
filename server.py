@@ -11,7 +11,7 @@ from functools import wraps
 app = Flask(__name__, static_folder='static', static_url_path='')
 CORS(app)
 
-DB_PATH = os.environ.get('DATABASE_PATH', 'database.db')
+DB_PATH = os.environ.get('DATABASE_PATH', 'data/database.db')
 
 DEFAULT_STEPS = [
     "Operatory",
@@ -26,6 +26,9 @@ def get_stages_from_db(conn):
     return [{'id': r[0], 'name': r[1], 'ordering': r[2]} for r in rows]
 
 def init_db():
+    # Ensure data directory exists
+    os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
+    
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     cursor.execute('''

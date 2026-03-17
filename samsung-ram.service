@@ -1,0 +1,16 @@
+[Unit]
+Description=Samsung RAM Denture Queue Service
+After=network.target
+
+[Service]
+User=cheezumdomp
+WorkingDirectory=/home/cheezumdomp/SamsungRAMProject
+ExecStart=/home/cheezumdomp/SamsungRAMProject/.venv/bin/python server.py
+Restart=always
+RestartSec=5
+# Credentials and secrets are managed in a separate .env file
+# Create this file on the Pi at /home/cheezumdomp/SamsungRAMProject/.env
+EnvironmentFile=/home/cheezumdomp/SamsungRAMProject/.env
+
+[Install]
+WantedBy=multi-user.target

@@ -21,8 +21,30 @@ python server.py
 The server will create `database.db` and seed default stages on first run.
 
 Recommended Pi deployment:
-- Run the app with Gunicorn behind Nginx, or expose via Cloudflare Tunnel.
-- Create a systemd service to run Gunicorn on boot.
+1. **Sync to Pi**:
+   Update `PI_HOST` in `sync_to_pi.sh`, then run:
+   ```bash
+   ./sync_to_pi.sh
+   ```
+2. **Setup Credentials**:
+   On the Pi, create your environment file:
+   ```bash
+   cd ~/SamsungRAMProject
+   cp .env.example .env
+   nano .env  # Set your ADMIN_USER, ADMIN_PASS, and JWT_SECRET
+   ```
+3. **Install & Start Service**:
+   ```bash
+   sudo ./deploy_pi.sh
+   ```
+4. **Cloudflare Tunnel**:
+   Find your public link by checking the logs:
+   ```bash
+   journalctl -u samsung-ram -f
+   ```
+   Look for the `https://<random>.trycloudflare.com` URL.
+
+For a full guide on professional domains and persistent tunnels, see [PI_DEPLOYMENT.md](PI_DEPLOYMENT.md).
 
 Security notes:
 - The development server currently generates a self-signed certificate; for production use a valid TLS certificate (Let's Encrypt) or use Cloudflare Tunnel.

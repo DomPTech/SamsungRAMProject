@@ -1,4 +1,4 @@
-database.db
+data/
 .venv/
 __pycache__/
 *.pyc
@@ -6,3 +6,4 @@ __pycache__/
 *.pem
 .vscode/
 cloudflared*
+.env
