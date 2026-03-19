@@ -2,34 +2,148 @@ const logContent = document.getElementById('log-content');
 const statusText = document.getElementById('status-text');
 const statusPanel = document.getElementById('support-status');
 const btnRead = document.getElementById('btn-read');
+const btnWrite = document.getElementById('btn-write');
 const btnClearLog = document.getElementById('clear-log');
 const toast = document.getElementById('toast');
+const writePanel = document.getElementById('write-panel');
+const patientNameInput = document.getElementById('patient-name');
+const patientIdInput = document.getElementById('patient-id');
+const btnWriteStart = document.getElementById('btn-write-start');
+const adminLoginForm = document.getElementById('admin-login-form');
+const adminUserInput = document.getElementById('admin-user');
+const adminPassInput = document.getElementById('admin-pass');
+const adminLoginBtn = document.getElementById('admin-login-btn');
+const adminLogoutBtn = document.getElementById('admin-logout-btn');
+const authStatus = document.getElementById('auth-status');
 
 let activeAction = null; // 'read' or 'write'
+let nfcSupported = false;
+let scannerLocked = false;
 
 window.addEventListener('load', () => {
+    setupAuthUI();
     checkNFCSupport();
 
-    // Register Service Worker
     if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('sw.js')
-            .then(() => console.log('Service Worker Registered'))
             .catch(err => console.error('SW Registration Failed', err));
     }
-    // Load stages from server for client-side UI
+
     fetchStages();
 });
+
+function getAuthToken() {
+    const token = localStorage.getItem('admin_token') || localStorage.getItem('adminToken');
+    if (token && !localStorage.getItem('adminToken')) {
+        localStorage.setItem('adminToken', token);
+    }
+    return token;
+}
+
+function setAuthToken(token) {
+    localStorage.setItem('adminToken', token);
+    localStorage.setItem('admin_token', token);
+}
+
+function clearAuthToken() {
+    localStorage.removeItem('adminToken');
+    localStorage.removeItem('admin_token');
+}
+
+function setupAuthUI() {
+    if (adminLoginBtn) {
+        adminLoginBtn.addEventListener('click', adminLogin);
+    }
+    if (adminLogoutBtn) {
+        adminLogoutBtn.addEventListener('click', adminLogout);
+    }
+
+    const authenticated = Boolean(getAuthToken());
+    updateAuthState(authenticated);
+
+    btnRead.addEventListener('click', startReadMode);
+    btnWrite.addEventListener('click', showWritePanel);
+    btnWriteStart.addEventListener('click', startWriteMode);
+
+    btnClearLog.addEventListener('click', () => {
+        logContent.innerHTML = '<div class="log-entry system">Log cleared.</div>';
+    });
+}
+
+function updateAuthState(authenticated) {
+    if (authenticated) {
+        authStatus.textContent = 'Admin authenticated. Scanner actions are enabled.';
+        authStatus.className = 'log-entry success';
+        adminLoginForm.classList.add('hidden');
+        adminLogoutBtn.classList.remove('hidden');
+        setScannerEnabled(true);
+    } else {
+        authStatus.textContent = 'Admin login required for scanning and writing.';
+        authStatus.className = 'log-entry error';
+        adminLoginForm.classList.remove('hidden');
+        adminLogoutBtn.classList.add('hidden');
+        writePanel.classList.add('hidden');
+        setScannerEnabled(false);
+    }
+}
+
+function setScannerEnabled(enabled) {
+    const opacity = enabled ? '1' : '0.55';
+    btnRead.style.opacity = opacity;
+    btnWrite.style.opacity = opacity;
+    btnRead.style.pointerEvents = enabled ? 'auto' : 'none';
+    btnWrite.style.pointerEvents = enabled ? 'auto' : 'none';
+}
+
+async function adminLogin() {
+    const username = adminUserInput.value.trim();
+    const password = adminPassInput.value;
+
+    if (!username || !password) {
+        showToast('Enter admin credentials');
+        return;
+    }
+
+    try {
+        const resp = await fetch('/api/auth/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, password })
+        });
+
+        const data = await resp.json();
+        if (!resp.ok || !data.token) {
+            showToast(data.error || 'Login failed');
+            return;
+        }
+
+        setAuthToken(data.token);
+        adminPassInput.value = '';
+        updateAuthState(true);
+        log('Admin authenticated for scanner actions.', 'success');
+    } catch (err) {
+        log(`Admin login failed: ${err.message}`, 'error');
+        showToast('Login failed');
+    }
+}
+
+function adminLogout() {
+    clearAuthToken();
+    updateAuthState(false);
+    log('Admin logged out.', 'system');
+}
 
 async function fetchStages() {
     try {
         const resp = await fetch('/api/stages');
-        if (resp.ok) {
-            const data = await resp.json();
-            window.STAGES = data.stages || [];
-            log(`Loaded ${window.STAGES.length} stage(s) from server`, 'info');
-        } else {
+        if (!resp.ok) {
             log('Failed to load stages from server', 'error');
+            return;
         }
+
+        const data = await resp.json();
+        window.STAGES = data.stages || [];
+        log(`Loaded ${window.STAGES.length} stage(s) from server`, 'info');
     } catch (err) {
         log(`Error fetching stages: ${err.message}`, 'error');
     }
@@ -51,187 +165,68 @@ function showToast(message, duration = 3000) {
     }, duration);
 }
 
-// Using origin-relative endpoints for API calls (e.g. `/api/...`)
-
-function openAdmin() {
-    const modal = document.getElementById('adminModal');
-    if (!modal) return;
-    modal.classList.remove('hidden');
-    const token = localStorage.getItem('admin_token');
-    if (token) {
-        document.getElementById('adminLoginForm').classList.add('hidden');
-        document.getElementById('adminPanel').classList.remove('hidden');
-        document.getElementById('adminLogoutBtn').classList.remove('hidden');
-        fetchStagesAdmin();
-    } else {
-        document.getElementById('adminLoginForm').classList.remove('hidden');
-        document.getElementById('adminPanel').classList.add('hidden');
-    }
-}
-
-function closeAdmin() {
-    const modal = document.getElementById('adminModal');
-    if (!modal) return;
-    modal.classList.add('hidden');
-}
-
-async function adminLogin() {
-    const usernameEl = document.getElementById('adminUser');
-    const passwordEl = document.getElementById('adminPass');
-    if (!usernameEl || !passwordEl) return alert('Admin inputs not found');
-    const username = usernameEl.value.trim();
-    const password = passwordEl.value;
-    if (!username || !password) return alert('Enter username and password');
-
-    try {
-        const resp = await fetch('/api/auth/login', {
-            method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username, password })
-        });
-        const data = await resp.json();
-        if (!resp.ok) return alert(data.error || 'Login failed');
-        localStorage.setItem('admin_token', data.token);
-        document.getElementById('adminLoginForm').classList.add('hidden');
-        document.getElementById('adminPanel').classList.remove('hidden');
-        document.getElementById('adminLogoutBtn').classList.remove('hidden');
-        fetchStagesAdmin();
-    } catch (err) {
-        console.error('Login error', err);
-        alert('Login failed');
-    }
-}
-
-function adminLogout() {
-    localStorage.removeItem('admin_token');
-    document.getElementById('adminPanel').classList.add('hidden');
-    document.getElementById('adminLoginForm').classList.remove('hidden');
-    document.getElementById('adminLogoutBtn').classList.add('hidden');
-}
-
-async function fetchStagesAdmin() {
-    try {
-        const resp = await fetch('/api/stages');
-        if (!resp.ok) throw new Error('Failed to fetch stages');
-        const data = await resp.json();
-        renderStagesAdmin(data.stages || []);
-    } catch (err) {
-        console.error('fetchStagesAdmin', err);
-        alert('Unable to load stages from server');
-    }
-}
-
-function renderStagesAdmin(stages) {
-    const container = document.getElementById('adminStagesList');
-    if (!container) return;
-    container.innerHTML = '';
-    if (!stages.length) {
-        container.innerHTML = '<div style="color:#666;">No stages configured.</div>';
-        return;
-    }
-    stages.forEach(s => {
-        const el = document.createElement('div');
-        el.style.display = 'flex';
-        el.style.alignItems = 'center';
-        el.style.gap = '8px';
-        el.style.padding = '8px';
-        el.style.borderBottom = '1px solid #eee';
-
-        const nameInput = document.createElement('input');
-        nameInput.value = s.name;
-        nameInput.style.flex = '1';
-        nameInput.style.padding = '8px';
-
-        const saveBtn = document.createElement('button');
-        saveBtn.className = 'btn';
-        saveBtn.textContent = 'Save';
-        saveBtn.onclick = () => updateStageAdmin(s.id, nameInput.value, s.ordering);
-
-        const delBtn = document.createElement('button');
-        delBtn.className = 'btn';
-        delBtn.style.background = 'transparent';
-        delBtn.style.border = '1px solid #ddd';
-        delBtn.textContent = 'Delete';
-        delBtn.onclick = () => { if (confirm('Delete this stage?')) deleteStageAdmin(s.id); };
-
-        el.appendChild(nameInput);
-        el.appendChild(saveBtn);
-        el.appendChild(delBtn);
-        container.appendChild(el);
-    });
-}
-
-async function createStageAdmin() {
-    const nameEl = document.getElementById('newStageName');
-    if (!nameEl) return alert('New stage input not found');
-    const name = nameEl.value.trim();
-    if (!name) return alert('Enter a stage name');
-    const token = localStorage.getItem('admin_token');
-    try {
-        const resp = await fetch('/api/stages', {
-            method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-            body: JSON.stringify({ name })
-        });
-        const data = await resp.json();
-        if (!resp.ok) return alert(data.error || 'Failed to create');
-        nameEl.value = '';
-        renderStagesAdmin(data.stages || []);
-    } catch (err) {
-        console.error('createStageAdmin', err);
-        alert('Failed to create stage');
-    }
-}
-
-async function updateStageAdmin(id, name, ordering) {
-    const token = localStorage.getItem('admin_token');
-    try {
-        const resp = await fetch(`/api/stages/${id}`, {
-            method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-            body: JSON.stringify({ name })
-        });
-        const data = await resp.json();
-        if (!resp.ok) return alert(data.error || 'Failed to update');
-        renderStagesAdmin(data.stages || []);
-    } catch (err) {
-        console.error('updateStageAdmin', err);
-        alert('Failed to update stage');
-    }
-}
-
-async function deleteStageAdmin(id) {
-    const token = localStorage.getItem('admin_token');
-    try {
-        const resp = await fetch(`/api/stages/${id}`, {
-            method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` }
-        });
-        const data = await resp.json();
-        if (!resp.ok) return alert(data.error || 'Failed to delete');
-        renderStagesAdmin(data.stages || []);
-    } catch (err) {
-        console.error('deleteStageAdmin', err);
-        alert('Failed to delete stage');
-    }
-}
-
 async function checkNFCSupport() {
     if ('NDEFReader' in window) {
-        statusText.textContent = 'NFC is supported on this device';
+        nfcSupported = true;
+        statusText.textContent = 'NFC supported. Admin login required.';
         statusPanel.classList.add('supported');
-        log('NFC Support detected.', 'success');
+        log('NFC support detected.', 'success');
     } else {
+        nfcSupported = false;
         statusText.textContent = 'NFC is not supported on this browser/device';
         statusPanel.classList.add('error');
-        log('NFC Support NOT detected. Ensure you are using Chrome on Android and HTTPS.', 'error');
-        btnRead.style.opacity = '0.5';
-        btnWrite.style.opacity = '0.5';
-        btnRead.style.pointerEvents = 'none';
-        btnWrite.style.pointerEvents = 'none';
+        log('NFC support not detected. Use Chrome on Android over HTTPS.', 'error');
+        setScannerEnabled(false);
     }
 }
 
-// Action Handlers
-btnRead.onclick = async () => {
+function ensureReadyForAction(action) {
+    if (!nfcSupported) {
+        showToast('NFC not supported');
+        return false;
+    }
+
+    if (!getAuthToken()) {
+        showToast('Admin login required');
+        log(`${action} blocked: admin authentication required.`, 'error');
+        updateAuthState(false);
+        return false;
+    }
+
+    if (scannerLocked) {
+        showToast('Scanner busy. Finish current action first.');
+        return false;
+    }
+
+    return true;
+}
+
+function setActiveAction(action) {
+    activeAction = action;
+    btnRead.classList.toggle('selected', action === 'read');
+    btnWrite.classList.toggle('selected', action === 'write');
+}
+
+function showWritePanel() {
+    if (!ensureReadyForAction('Write')) {
+        return;
+    }
+
+    setActiveAction('write');
+    writePanel.classList.remove('hidden');
+    patientNameInput.focus();
+    log('Enter patient name/ID, then tap "Write to Tag".', 'info');
+}
+
+async function startReadMode() {
+    if (!ensureReadyForAction('Scan')) {
+        return;
+    }
+
     setActiveAction('read');
-    log('Scanning for tags... Place your phone near one.', 'info');
+    writePanel.classList.add('hidden');
+    scannerLocked = true;
+    log('Scanning for tray tags. Tap a tray now.', 'info');
 
     try {
         const ndef = new NDEFReader();
@@ -240,73 +235,136 @@ btnRead.onclick = async () => {
         ndef.onreadingerror = () => {
             log('Error reading tag. Is it an NDEF tag?', 'error');
             showToast('Scan failed');
+            scannerLocked = false;
         };
 
-        ndef.onreading = async ({ message, serialNumber }) => {
-            log(`Tag detected! Serial: ${serialNumber}`, 'success');
+        ndef.onreading = async ({ serialNumber }) => {
+            const token = getAuthToken();
+            if (!token) {
+                scannerLocked = false;
+                updateAuthState(false);
+                return;
+            }
+
+            log(`Tag detected: ${serialNumber}`, 'success');
 
             try {
                 const response = await fetch('/api/scan', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
                     body: JSON.stringify({ serialNumber })
                 });
 
                 const result = await response.json();
                 if (response.ok) {
-                    log(`Server Updated: ${result.step_name} (${result.status})`, 'success');
-                    showToast(`Updated: ${result.step_name}`);
+                    if (result.status === 'reset') {
+                        log('Tray reached final stage previously. It was removed and reset.', 'success');
+                        showToast('Tray reset and removed from dashboard');
+                    } else {
+                        log(`Progress updated: ${result.step_name} (${result.status})`, 'success');
+                        showToast(`Updated: ${result.step_name}`);
+                    }
+                } else if (response.status === 401) {
+                    clearAuthToken();
+                    updateAuthState(false);
+                    log('Unauthorized scanner request. Please login again.', 'error');
+                    showToast('Session expired');
                 } else {
-                    log(`Server Error: ${result.error}`, 'error');
+                    log(`Server error: ${result.error || 'Unknown error'}`, 'error');
                 }
             } catch (err) {
                 log(`Failed to connect to scanner server: ${err.message}`, 'error');
             }
 
-            for (const record of message.records) {
-                // TODO: rest of record handling
-            }
+            scannerLocked = false;
+            setActiveAction(null);
         };
     } catch (error) {
-        log(`Scan failed: ${error}`, 'error');
+        scannerLocked = false;
+        setActiveAction(null);
+        log(`Scan failed: ${error.message || error}`, 'error');
     }
-};
-
-btnWrite.onclick = () => {
-    setActiveAction('write');
-    writePanel.classList.remove('hidden');
-    nfcInput.focus();
-    log('Enter content and scan a tag to write.', 'info');
-};
-
-nfcInput.oninput = async () => {
-    const text = nfcInput.value;
-    if (text.length > 0) {
-        try {
-            const ndef = new NDEFReader();
-            // In Web NFC, write() starts the process and waits for a tag
-            log(`Ready to write: "${text}"`, 'info');
-            await ndef.write(text);
-            log(`Successfully wrote to tag!`, 'success');
-            showToast('Write Success!');
-            nfcInput.value = '';
-            writePanel.classList.add('hidden');
-            setActiveAction(null);
-        } catch (error) {
-            // This might trigger immediately if permissions fail, 
-            // or later if the tag is removed too early.
-            if (error.name !== 'NotAllowedError' && error.name !== 'AbortError') {
-                log(`Write failed: ${error}`, 'error');
-            }
-        }
-    }
-};
-
-function setActiveAction(action) {
-    activeAction = action;
-    btnRead.classList.toggle('selected', action === 'read');
 }
 
-btnClearLog.onclick = () => {
-    logContent.innerHTML = '<div class="log-entry system">Log cleared.</div>';
-};
+async function startWriteMode() {
+    if (!ensureReadyForAction('Write')) {
+        return;
+    }
+
+    const patientName = patientNameInput.value.trim();
+    const patientId = patientIdInput.value.trim();
+
+    if (!patientName && !patientId) {
+        showToast('Enter patient name or ID');
+        return;
+    }
+
+    const displayName = patientName || `ID-${patientId}`;
+    const payload = JSON.stringify({
+        patientName: patientName || null,
+        patientId: patientId || null,
+        writtenAt: new Date().toISOString()
+    });
+
+    scannerLocked = true;
+    log('Ready to write. Tap the target NFC tag now.', 'info');
+
+    try {
+        const ndef = new NDEFReader();
+        await ndef.scan();
+
+        ndef.onreadingerror = () => {
+            log('Unable to read tag details before writing.', 'error');
+            showToast('Write failed');
+            scannerLocked = false;
+        };
+
+        ndef.onreading = async ({ serialNumber }) => {
+            const token = getAuthToken();
+            if (!token) {
+                scannerLocked = false;
+                updateAuthState(false);
+                return;
+            }
+
+            try {
+                await ndef.write(payload);
+
+                const registerResp = await fetch('/api/dentures/register', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        serialNumber,
+                        patientName: displayName
+                    })
+                });
+
+                const registerData = await registerResp.json();
+                if (!registerResp.ok) {
+                    throw new Error(registerData.error || 'Server registration failed');
+                }
+
+                log(`Wrote and registered tag ${serialNumber} for ${displayName}.`, 'success');
+                showToast('Tag write complete');
+                patientNameInput.value = '';
+                patientIdInput.value = '';
+                writePanel.classList.add('hidden');
+                setActiveAction(null);
+            } catch (err) {
+                log(`Write/registration failed: ${err.message}`, 'error');
+                showToast('Write failed');
+            }
+
+            scannerLocked = false;
+        };
+    } catch (error) {
+        scannerLocked = false;
+        log(`Write setup failed: ${error.message || error}`, 'error');
+    }
+}

@@ -124,8 +124,9 @@ def get_dentures():
     })
 
 @app.route('/api/scan', methods=['POST'])
+@require_auth
 def scan_tag():
-    data = request.json
+    data = request.json or {}
     serial = data.get('serialNumber')
     if not serial:
         return jsonify({'error': 'Missing serialNumber'}), 400
@@ -141,10 +142,16 @@ def scan_tag():
     row = cursor.fetchone()
 
     if row:
-        # Increment step, but don't exceed max_index
-        new_step = min(row[0] + 1, max_index)
-        cursor.execute("UPDATE dentures SET step_index = ?, last_updated = CURRENT_TIMESTAMP WHERE serial_number = ?", (new_step, serial))
-        status = 'updated'
+        # If tray already reached final stage, remove it from active queue.
+        if row[0] >= max_index:
+            cursor.execute("DELETE FROM dentures WHERE serial_number = ?", (serial,))
+            status = 'reset'
+            new_step = 0
+        else:
+            # Increment step, but don't exceed max_index
+            new_step = min(row[0] + 1, max_index)
+            cursor.execute("UPDATE dentures SET step_index = ?, last_updated = CURRENT_TIMESTAMP WHERE serial_number = ?", (new_step, serial))
+            status = 'updated'
     else:
         # Create new entry
         cursor.execute("INSERT INTO dentures (serial_number, step_index) VALUES (?, 0)", (serial,))
@@ -155,7 +162,7 @@ def scan_tag():
     conn.close()
 
     step_name = None
-    if stages:
+    if stages and status != 'reset':
         step_name = stages[min(new_step, max_index)]['name']
 
     return jsonify({
@@ -163,6 +170,34 @@ def scan_tag():
         'step_index': new_step,
         'step_name': step_name
     }), 201
+
+
+@app.route('/api/dentures/register', methods=['POST'])
+@require_auth
+def register_denture():
+    data = request.json or {}
+    serial = data.get('serialNumber')
+    patient_name = (data.get('patientName') or '').strip()
+
+    if not serial:
+        return jsonify({'error': 'Missing serialNumber'}), 400
+    if not patient_name:
+        return jsonify({'error': 'Missing patientName'}), 400
+
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute('''
+        INSERT INTO dentures (serial_number, patient_name, step_index)
+        VALUES (?, ?, 0)
+        ON CONFLICT(serial_number) DO UPDATE SET
+            patient_name = excluded.patient_name,
+            step_index = 0,
+            last_updated = CURRENT_TIMESTAMP
+    ''', (serial, patient_name))
+    conn.commit()
+    conn.close()
+
+    return jsonify({'status': 'registered', 'serial': serial, 'patient': patient_name, 'step_index': 0}), 200
 
 
 @app.route('/api/stages', methods=['GET'])

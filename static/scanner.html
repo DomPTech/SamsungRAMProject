@@ -40,9 +40,25 @@
             <span id="status-text">Checking NFC compatibility...</span>
         </section>
 
+        <section class="input-section" id="auth-panel">
+            <div id="auth-status" class="log-entry system" style="margin-bottom: 1rem;">Admin login required for scanning and writing.</div>
+            <div id="admin-login-form">
+                <div class="glass-input-group" style="margin-bottom: 0.75rem;">
+                    <label for="admin-user">Admin Username</label>
+                    <input type="text" id="admin-user" placeholder="Enter admin username" autocomplete="username">
+                </div>
+                <div class="glass-input-group" style="margin-bottom: 1rem;">
+                    <label for="admin-pass">Admin Password</label>
+                    <input type="password" id="admin-pass" placeholder="Enter admin password" autocomplete="current-password">
+                </div>
+                <button id="admin-login-btn" class="btn" type="button">Authenticate Admin</button>
+            </div>
+            <button id="admin-logout-btn" class="btn hidden" type="button">Logout Admin</button>
+        </section>
+
         <!-- Server IP input removed: client now uses origin-relative API endpoints -->
 
-        <div class="action-grid" style="grid-template-columns: 1fr;">
+        <div class="action-grid" style="grid-template-columns: repeat(2, minmax(0, 1fr));">
             <div class="card read-card" id="btn-read"
                 style="height: 200px; display: flex; flex-direction: column; justify-content: center; align-items: center;">
                 <div class="card-icon">
@@ -55,14 +71,31 @@
                 <p>Tap a tray to record progress.</p>
                 <div class="ripple"></div>
             </div>
+            <div class="card" id="btn-write"
+                style="height: 200px; display: flex; flex-direction: column; justify-content: center; align-items: center;">
+                <div class="card-icon">
+                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M12 20V4M12 20L8 16M12 20L16 16" stroke="currentColor" stroke-width="2"
+                            stroke-linecap="round" stroke-linejoin="round" />
+                    </svg>
+                </div>
+                <h3>Write Tray Data</h3>
+                <p>Assign a patient name/ID to a tag.</p>
+                <div class="ripple"></div>
+            </div>
         </div>
 
         <section class="input-section hidden" id="write-panel">
             <div class="glass-input-group">
-                <label for="nfc-input">Content to Write</label>
-                <input type="text" id="nfc-input" placeholder="Enter text here..." autocomplete="off">
+                <label for="patient-name">Patient Name</label>
+                <input type="text" id="patient-name" placeholder="Enter patient name" autocomplete="off">
             </div>
-            <div class="hint">Tap your phone to a tag after clicking Write</div>
+            <div class="glass-input-group" style="margin-top: 0.75rem;">
+                <label for="patient-id">Patient ID</label>
+                <input type="text" id="patient-id" placeholder="Enter patient ID" autocomplete="off">
+            </div>
+            <div class="hint">Tap your phone to a tag after clicking Write to Tag.</div>
+            <button id="btn-write-start" class="btn" style="margin-top: 1rem;" type="button">Write to Tag</button>
         </section>
 
         <section class="log-section">
