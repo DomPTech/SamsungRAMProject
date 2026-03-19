@@ -339,6 +339,76 @@ def delete_denture(serial):
     conn.close()
     return jsonify({'status': 'success'})
 
+
+@app.route('/api/dentures/<serial>', methods=['PUT'])
+@require_auth
+def update_denture(serial):
+    data = request.json or {}
+    patient_name = data.get('patientName')
+    step_index = data.get('stepIndex')
+
+    if patient_name is None and step_index is None:
+        return jsonify({'error': 'No update fields provided'}), 400
+
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+
+    cursor.execute('SELECT serial_number FROM dentures WHERE serial_number = ?', (serial,))
+    existing = cursor.fetchone()
+    if not existing:
+        conn.close()
+        return jsonify({'error': 'Entry not found'}), 404
+
+    updates = []
+    params = []
+
+    if patient_name is not None:
+        cleaned_name = str(patient_name).strip()
+        if not cleaned_name:
+            conn.close()
+            return jsonify({'error': 'patientName cannot be empty'}), 400
+        updates.append('patient_name = ?')
+        params.append(cleaned_name)
+
+    if step_index is not None:
+        try:
+            parsed_step = int(step_index)
+        except (TypeError, ValueError):
+            conn.close()
+            return jsonify({'error': 'stepIndex must be an integer'}), 400
+
+        stages = get_stages_from_db(conn)
+        max_index = max(0, len(stages) - 1)
+        if parsed_step < 0 or parsed_step > max_index:
+            conn.close()
+            return jsonify({'error': f'stepIndex must be between 0 and {max_index}'}), 400
+
+        updates.append('step_index = ?')
+        params.append(parsed_step)
+
+    updates.append('last_updated = CURRENT_TIMESTAMP')
+    params.append(serial)
+
+    cursor.execute(f"UPDATE dentures SET {', '.join(updates)} WHERE serial_number = ?", tuple(params))
+    conn.commit()
+
+    cursor.execute('SELECT serial_number, patient_name, step_index, last_updated FROM dentures WHERE serial_number = ?', (serial,))
+    row = cursor.fetchone()
+    stages = get_stages_from_db(conn)
+    conn.close()
+
+    step_name = stages[min(row[2], max(0, len(stages)-1))]['name'] if stages else None
+    return jsonify({
+        'status': 'success',
+        'denture': {
+            'serial': row[0],
+            'patient': row[1],
+            'step_index': row[2],
+            'step_name': step_name,
+            'updated': row[3]
+        }
+    })
+
 if __name__ == '__main__':
     init_db()
     

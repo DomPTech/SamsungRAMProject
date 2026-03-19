@@ -187,8 +187,133 @@ async function loadAdminStages() {
             el.appendChild(actions);
             list.appendChild(el);
         });
+        await loadAdminEntries();
     } catch (err) {
         console.error('Failed to load stages', err);
+    }
+}
+
+async function loadAdminEntries() {
+    const SERVER_URL = getServerUrl();
+    const list = document.getElementById('adminEntriesList');
+    if (!list) return;
+
+    try {
+        const res = await fetch(`${SERVER_URL}/api/dentures`);
+        const data = await res.json();
+        const dentures = data.dentures || [];
+
+        if (dentures.length === 0) {
+            list.innerHTML = '<div style="padding:10px 0; color:#777;">No active tray entries.</div>';
+            return;
+        }
+
+        list.innerHTML = '';
+        dentures.forEach(d => {
+            const el = document.createElement('div');
+            el.style.display = 'flex';
+            el.style.justifyContent = 'space-between';
+            el.style.alignItems = 'center';
+            el.style.padding = '8px 6px';
+            el.style.borderBottom = '1px solid #f0f0f0';
+            el.innerHTML = `
+                <div style="flex:1; min-width:0;">
+                    <div style="font-weight:600;">${d.patient} <span style="color:#999; font-weight:400;">(${d.serial.slice(-4)})</span></div>
+                    <div style="font-size:0.85rem; color:#666;">${d.step_name || 'Unknown stage'} • ${d.serial}</div>
+                </div>
+            `;
+
+            const actions = document.createElement('div');
+            actions.style.display = 'flex';
+            actions.style.gap = '6px';
+
+            const editBtn = document.createElement('button');
+            editBtn.className = 'btn';
+            editBtn.style.background = '#e0e0e0';
+            editBtn.innerText = 'Edit';
+            editBtn.onclick = () => editEntryAdmin(d);
+
+            const delBtn = document.createElement('button');
+            delBtn.className = 'btn';
+            delBtn.style.background = '#f44336';
+            delBtn.style.color = 'white';
+            delBtn.innerText = 'Delete';
+            delBtn.onclick = () => deleteEntryAdmin(d.serial);
+
+            actions.appendChild(editBtn);
+            actions.appendChild(delBtn);
+            el.appendChild(actions);
+            list.appendChild(el);
+        });
+    } catch (err) {
+        console.error('Failed to load entries', err);
+        list.innerHTML = '<div style="padding:10px 0; color:#c62828;">Failed to load entries.</div>';
+    }
+}
+
+async function deleteEntryAdmin(serial) {
+    if (!confirm(`Delete tray entry ${serial}?`)) return;
+    const SERVER_URL = getServerUrl();
+    const token = localStorage.getItem('adminToken');
+
+    try {
+        const res = await fetch(`${SERVER_URL}/api/dentures/${encodeURIComponent(serial)}`, {
+            method: 'DELETE',
+            headers: {'Authorization': `Bearer ${token}`}
+        });
+
+        if (res.ok) {
+            await Promise.all([loadAdminEntries(), fetchDentures()]);
+        } else {
+            const data = await res.json();
+            alert(data.error || 'Failed to delete entry');
+        }
+    } catch (err) {
+        console.error('Delete entry failed', err);
+        alert('Unable to contact server');
+    }
+}
+
+async function editEntryAdmin(entry) {
+    const newPatient = prompt('Patient name', entry.patient || 'Patient');
+    if (newPatient === null) return;
+
+    const newStepRaw = prompt('Step index (0-based)', String(entry.step_index ?? 0));
+    if (newStepRaw === null) return;
+
+    const parsedStep = parseInt(newStepRaw, 10);
+    if (isNaN(parsedStep)) {
+        alert('Step index must be an integer.');
+        return;
+    }
+
+    const payload = {
+        patientName: newPatient.trim() || 'Patient',
+        stepIndex: parsedStep
+    };
+
+    const SERVER_URL = getServerUrl();
+    const token = localStorage.getItem('adminToken');
+
+    try {
+        const res = await fetch(`${SERVER_URL}/api/dentures/${encodeURIComponent(entry.serial)}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify(payload)
+        });
+
+        if (res.ok) {
+            await Promise.all([loadAdminEntries(), fetchDentures()]);
+        } else {
+            const data = await res.json();
+            alert(data.error || 'Failed to update entry');
+        }
+    } catch (err) {
+        console.error('Edit entry failed', err);
+        alert('Unable to contact server');
     }
 }
 
