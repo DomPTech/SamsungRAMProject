@@ -15,7 +15,6 @@ echo "🔍 Preparing to sync to $PI_HOST..."
 if rsync -avz \
     --exclude-from='.gitignore' \
     --exclude='.git/' \
-    --exclude='samsung-ram.service' \
     --exclude='.env' \
     . "$PI_USER@$PI_HOST:$PI_DEST"; then
     echo "✅ Sync complete!"
