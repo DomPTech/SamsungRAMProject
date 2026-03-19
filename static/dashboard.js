@@ -179,7 +179,7 @@ async function loadAdminStages() {
             actions.style.gap = '6px';
             const editBtn = document.createElement('button');
             editBtn.className = 'btn'; editBtn.style.background = '#e0e0e0'; editBtn.innerText = 'Edit';
-            editBtn.onclick = () => editStageAdmin(s.id, s.name);
+            editBtn.onclick = () => editStageAdmin(s.id, s.name, s.ordering);
             const delBtn = document.createElement('button');
             delBtn.className = 'btn'; delBtn.style.background = '#f44336'; delBtn.style.color = 'white'; delBtn.innerText = 'Delete';
             delBtn.onclick = () => deleteStageAdmin(s.id);
@@ -278,18 +278,19 @@ async function editEntryAdmin(entry) {
     const newPatient = prompt('Patient name', entry.patient || 'Patient');
     if (newPatient === null) return;
 
-    const newStepRaw = prompt('Step index (0-based)', String(entry.step_index ?? 0));
+    const currentStepOneBased = (entry.step_index ?? 0) + 1;
+    const newStepRaw = prompt('Step number (1 = first step)', String(currentStepOneBased));
     if (newStepRaw === null) return;
 
     const parsedStep = parseInt(newStepRaw, 10);
-    if (isNaN(parsedStep)) {
-        alert('Step index must be an integer.');
+    if (isNaN(parsedStep) || parsedStep < 1) {
+        alert('Step number must be an integer of 1 or greater.');
         return;
     }
 
     const payload = {
         patientName: newPatient.trim() || 'Patient',
-        stepIndex: parsedStep
+        stepIndex: parsedStep - 1
     };
 
     const SERVER_URL = getServerUrl();
@@ -355,13 +356,16 @@ async function deleteStageAdmin(id) {
     } catch (err) { console.error(err); alert('Unable to contact server'); }
 }
 
-async function editStageAdmin(id, currentName) {
+async function editStageAdmin(id, currentName, currentOrdering) {
     const name = prompt('New stage name', currentName);
     if (name === null) return;
-    const ordering = parseInt(prompt('New ordering (0-based index)', '0')); // optional
+    const currentOrderOneBased = (currentOrdering ?? 0) + 1;
+    const currentOrderingRaw = prompt('New ordering (1 = first stage)', String(currentOrderOneBased)); // optional
+    if (currentOrderingRaw === null) return;
+    const orderingInput = parseInt(currentOrderingRaw, 10);
     const payload = {};
     if (name) payload.name = name;
-    if (!isNaN(ordering)) payload.ordering = ordering;
+    if (!isNaN(orderingInput) && orderingInput >= 1) payload.ordering = orderingInput - 1;
     const SERVER_URL = getServerUrl();
     const token = localStorage.getItem('adminToken');
     try {

@@ -20,6 +20,68 @@ let activeAction = null; // 'read' or 'write'
 let nfcSupported = false;
 let scannerLocked = false;
 
+function generateRandomPatientId() {
+    const min = 100000;
+    const max = 999999;
+    return String(Math.floor(Math.random() * (max - min + 1)) + min);
+}
+
+function normalizePatientDisplayName(name, patientId) {
+    const cleanedName = (name || '').trim();
+    const cleanedPatientId = (patientId || '').trim();
+
+    if (!cleanedName && !cleanedPatientId) {
+        return '';
+    }
+
+    if (!cleanedName) {
+        return `Patient (ID: e:${cleanedPatientId})`;
+    }
+
+    if (cleanedName.includes('(ID: e:')) {
+        return cleanedName;
+    }
+
+    return `${cleanedName} (ID: e:${cleanedPatientId})`;
+}
+
+function getExistingPatientIdsFromLog() {
+    const ids = new Set();
+    const entries = logContent ? Array.from(logContent.querySelectorAll('.log-entry')) : [];
+
+    entries.forEach(entry => {
+        const text = entry.textContent || '';
+        const match = text.match(/ID-(\d{6})/g);
+        if (match) {
+            match.forEach(idTag => ids.add(idTag.replace('ID-', '')));
+        }
+    });
+
+    return ids;
+}
+
+function resolvePatientId(inputId) {
+    const trimmed = (inputId || '').trim();
+    if (trimmed) {
+        return trimmed;
+    }
+
+    const existing = getExistingPatientIdsFromLog();
+    for (let attempt = 0; attempt < 10; attempt += 1) {
+        const candidate = generateRandomPatientId();
+        if (!existing.has(candidate)) {
+            return candidate;
+        }
+    }
+
+    return `${Date.now()}`.slice(-6);
+}
+
+function extractPatientIdFromName(name) {
+    const match = String(name || '').match(/\(ID:\s*e:(\d{6})\)\s*$/);
+    return match ? match[1] : '';
+}
+
 window.addEventListener('load', () => {
     setupAuthUI();
     checkNFCSupport();
@@ -295,17 +357,17 @@ async function startWriteMode() {
     }
 
     const patientName = patientNameInput.value.trim();
-    const patientId = patientIdInput.value.trim();
+    const patientId = resolvePatientId(patientIdInput.value);
+    const displayName = normalizePatientDisplayName(patientName, patientId);
 
     if (!patientName && !patientId) {
         showToast('Enter patient name or ID');
         return;
     }
 
-    const displayName = patientName || `ID-${patientId}`;
     const payload = JSON.stringify({
         patientName: patientName || null,
-        patientId: patientId || null,
+        patientId,
         writtenAt: new Date().toISOString()
     });
 
@@ -341,7 +403,8 @@ async function startWriteMode() {
                     },
                     body: JSON.stringify({
                         serialNumber,
-                        patientName: displayName
+                        patientName: displayName,
+                        patientId
                     })
                 });
 

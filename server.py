@@ -47,11 +47,36 @@ def init_db():
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS dentures (
             serial_number TEXT PRIMARY KEY,
+            patient_id TEXT,
             patient_name TEXT DEFAULT 'Patient',
             step_index INTEGER DEFAULT 0,
             last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     ''')
+
+    # Backfill patient_id for older databases that predate the column.
+    cursor.execute("PRAGMA table_info(dentures)")
+    columns = [row[1] for row in cursor.fetchall()]
+    if 'patient_id' not in columns:
+        cursor.execute('ALTER TABLE dentures ADD COLUMN patient_id TEXT')
+
+    cursor.execute('SELECT serial_number, patient_name FROM dentures WHERE patient_id IS NULL OR patient_id = ""')
+    for serial_number, patient_name in cursor.fetchall():
+        detected_patient_id = None
+        if patient_name:
+            import re
+            match = re.search(r'\(ID-(\d{6})\)\s*$', patient_name)
+            if match:
+                detected_patient_id = match.group(1)
+
+        if not detected_patient_id:
+            detected_patient_id = serial_number[-6:] if serial_number else None
+
+        if detected_patient_id:
+            cursor.execute(
+                'UPDATE dentures SET patient_id = ? WHERE serial_number = ?',
+                (detected_patient_id, serial_number)
+            )
     conn.commit()
     
     # Stages table (configurable steps)
@@ -159,6 +184,7 @@ def get_dentures():
 def scan_tag():
     data = request.json or {}
     serial = data.get('serialNumber')
+    patient_id = (data.get('patientId') or '').strip()
     if not serial:
         return jsonify({'error': 'Missing serialNumber'}), 400
     
@@ -169,7 +195,7 @@ def scan_tag():
     max_index = max(0, len(stages)-1)
 
     # Check if denture exists
-    cursor.execute("SELECT step_index FROM dentures WHERE serial_number = ?", (serial,))
+    cursor.execute("SELECT step_index, patient_id, patient_name FROM dentures WHERE serial_number = ?", (serial,))
     row = cursor.fetchone()
 
     if row:
@@ -184,8 +210,13 @@ def scan_tag():
             cursor.execute("UPDATE dentures SET step_index = ?, last_updated = CURRENT_TIMESTAMP WHERE serial_number = ?", (new_step, serial))
             status = 'updated'
     else:
-        # Create new entry
-        cursor.execute("INSERT INTO dentures (serial_number, step_index) VALUES (?, 0)", (serial,))
+        # Create new entry and preserve a stable patient identifier when provided.
+        inferred_patient_id = patient_id or serial[-6:]
+        inferred_patient_name = f'Patient (ID: e:{inferred_patient_id})'
+        cursor.execute(
+            "INSERT INTO dentures (serial_number, patient_id, patient_name, step_index) VALUES (?, ?, ?, 0)",
+            (serial, inferred_patient_id, inferred_patient_name)
+        )
         status = 'created'
         new_step = 0
 
@@ -209,26 +240,35 @@ def register_denture():
     data = request.json or {}
     serial = data.get('serialNumber')
     patient_name = (data.get('patientName') or '').strip()
+    patient_id = (data.get('patientId') or '').strip()
 
     if not serial:
         return jsonify({'error': 'Missing serialNumber'}), 400
     if not patient_name:
         return jsonify({'error': 'Missing patientName'}), 400
 
+    if not patient_id:
+        patient_id = serial[-6:]
+
+    normalized_name = patient_name
+    if f'(ID: e:{patient_id})' not in normalized_name:
+        normalized_name = f'{patient_name} (ID: e:{patient_id})'
+
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     cursor.execute('''
-        INSERT INTO dentures (serial_number, patient_name, step_index)
-        VALUES (?, ?, 0)
+        INSERT INTO dentures (serial_number, patient_id, patient_name, step_index)
+        VALUES (?, ?, ?, 0)
         ON CONFLICT(serial_number) DO UPDATE SET
+            patient_id = excluded.patient_id,
             patient_name = excluded.patient_name,
             step_index = 0,
             last_updated = CURRENT_TIMESTAMP
-    ''', (serial, patient_name))
+    ''', (serial, patient_id, normalized_name))
     conn.commit()
     conn.close()
 
-    return jsonify({'status': 'registered', 'serial': serial, 'patient': patient_name, 'step_index': 0}), 200
+    return jsonify({'status': 'registered', 'serial': serial, 'patient': normalized_name, 'patientId': patient_id, 'step_index': 0}), 200
 
 
 @app.route('/api/stages', methods=['GET'])
@@ -345,9 +385,10 @@ def delete_denture(serial):
 def update_denture(serial):
     data = request.json or {}
     patient_name = data.get('patientName')
+    patient_id = data.get('patientId')
     step_index = data.get('stepIndex')
 
-    if patient_name is None and step_index is None:
+    if patient_name is None and patient_id is None and step_index is None:
         return jsonify({'error': 'No update fields provided'}), 400
 
     conn = sqlite3.connect(DB_PATH)
@@ -369,6 +410,14 @@ def update_denture(serial):
             return jsonify({'error': 'patientName cannot be empty'}), 400
         updates.append('patient_name = ?')
         params.append(cleaned_name)
+
+    if patient_id is not None:
+        cleaned_patient_id = str(patient_id).strip()
+        if not cleaned_patient_id:
+            conn.close()
+            return jsonify({'error': 'patientId cannot be empty'}), 400
+        updates.append('patient_id = ?')
+        params.append(cleaned_patient_id)
 
     if step_index is not None:
         try:
@@ -402,10 +451,11 @@ def update_denture(serial):
         'status': 'success',
         'denture': {
             'serial': row[0],
-            'patient': row[1],
-            'step_index': row[2],
+            'patient_id': row[1],
+            'patient': row[2],
+            'step_index': row[3],
             'step_name': step_name,
-            'updated': row[3]
+            'updated': row[4]
         }
     })
 
