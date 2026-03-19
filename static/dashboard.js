@@ -20,7 +20,16 @@ async function renderPage(page, name = "Staff") {
                 <h3>Clinic Status</h3>
                 <div style="background: #eee; height: 180px; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #999;">Active Station: Lab</div>
             </div>
+            <div class="card qr-card" style="height: fit-content;">
+                <h3 style="margin-top: 0;">Scan to Open Dashboard</h3>
+                <div id="dashboardQrContainer" class="qr-container">
+                    <img id="dashboardQrImage" alt="QR code linking to dashboard" />
+                </div>
+                <p id="dashboardQrUrl" class="qr-url-text"></p>
+            </div>
         </div>`;
+
+        renderDashboardQr();
 
         await fetchDentures();
         // Auto-refresh every 5 seconds
@@ -81,6 +90,21 @@ function startTime() {
 
 function getServerUrl() {
     return window.location.origin;
+}
+
+function getDashboardUrl() {
+    return `${window.location.origin}/index.html`;
+}
+
+function renderDashboardQr() {
+    const qrImg = document.getElementById('dashboardQrImage');
+    const qrUrlText = document.getElementById('dashboardQrUrl');
+    if (!qrImg || !qrUrlText) return;
+
+    const dashboardUrl = getDashboardUrl();
+    const encodedUrl = encodeURIComponent(dashboardUrl);
+    qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&margin=0&data=${encodedUrl}`;
+    qrUrlText.textContent = dashboardUrl;
 }
 
 function openAdmin() {

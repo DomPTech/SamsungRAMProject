@@ -4,3 +4,4 @@ flask-sock
 bcrypt
 PyJWT
 gunicorn
+python-dotenv

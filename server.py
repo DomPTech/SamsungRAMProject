@@ -6,7 +6,20 @@ import ssl
 import bcrypt
 import jwt
 import datetime
+from pathlib import Path
 from functools import wraps
+from dotenv import load_dotenv
+
+BASE_DIR = Path(__file__).resolve().parent
+ENV_PATH = BASE_DIR / '.env'
+dotenv_loaded = load_dotenv(ENV_PATH)
+
+print(f"[startup] dotenv path={ENV_PATH} exists={ENV_PATH.exists()} loaded={dotenv_loaded}")
+print(
+    "[startup] admin env present "
+    f"ADMIN_USER={bool(os.environ.get('ADMIN_USER'))} "
+    f"ADMIN_PASS={bool(os.environ.get('ADMIN_PASS'))}"
+)
 
 app = Flask(__name__, static_folder='static', static_url_path='')
 CORS(app)
@@ -69,18 +82,36 @@ def init_db():
     conn.commit()
     conn.close()
 
-    # Seed admin user from environment variables if provided and no users exist
+    # Sync admin user from environment variables at startup.
     admin_user = os.environ.get('ADMIN_USER')
     admin_pass = os.environ.get('ADMIN_PASS')
     if admin_user and admin_pass:
         conn = sqlite3.connect(DB_PATH)
         cursor = conn.cursor()
-        cursor.execute('SELECT COUNT(1) FROM users')
-        if cursor.fetchone()[0] == 0:
-            pw_hash = bcrypt.hashpw(admin_pass.encode(), bcrypt.gensalt()).decode()
+        pw_hash = bcrypt.hashpw(admin_pass.encode(), bcrypt.gensalt()).decode()
+
+        # Use the oldest user row as canonical admin account and keep it synced.
+        cursor.execute('SELECT id, username FROM users ORDER BY id ASC LIMIT 1')
+        existing_admin = cursor.fetchone()
+
+        if existing_admin:
+            cursor.execute(
+                'UPDATE users SET username = ?, password_hash = ? WHERE id = ?',
+                (admin_user, pw_hash, existing_admin[0])
+            )
+            print(
+                '[startup] admin sync result '
+                f'updated=True user_id={existing_admin[0]} '
+                f'username_changed={existing_admin[1] != admin_user}'
+            )
+        else:
             cursor.execute('INSERT INTO users (username, password_hash) VALUES (?, ?)', (admin_user, pw_hash))
-            conn.commit()
+            print('[startup] admin sync result inserted=True user_id=new')
+
+        conn.commit()
         conn.close()
+    else:
+        print('[startup] admin sync skipped missing ADMIN_USER or ADMIN_PASS')
 
 # JWT secret for admin tokens
 JWT_SECRET = os.environ.get('JWT_SECRET', 'change-this-secret')
