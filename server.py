@@ -6,6 +6,7 @@ import ssl
 import bcrypt
 import jwt
 import datetime
+import re
 from pathlib import Path
 from functools import wraps
 from dotenv import load_dotenv
@@ -31,6 +32,25 @@ DEFAULT_STEPS = [
     "Design/CAD",
     "3D Printing/Post-Processing"
 ]
+
+
+def generate_patient_id(length=6):
+    import secrets
+    alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
+    return ''.join(secrets.choice(alphabet) for _ in range(length))
+
+
+def normalize_patient_name(patient_name, patient_id):
+    import re
+    base_name = (patient_name or '').strip()
+    normalized_id = str(patient_id or '').strip().upper()
+    base_name = re.sub(r'(?:\s*\(ID:\s*e:[^)]+\)\s*)+$', '', base_name, flags=re.IGNORECASE).strip()
+    base_name = re.sub(r'(?:\s*\(ID-[^)]+\)\s*)+$', '', base_name, flags=re.IGNORECASE).strip()
+
+    if not base_name:
+        base_name = 'Patient'
+
+    return f'{base_name} (ID: e:{normalized_id})'
 
 def get_stages_from_db(conn):
     cursor = conn.cursor()
@@ -60,22 +80,26 @@ def init_db():
     if 'patient_id' not in columns:
         cursor.execute('ALTER TABLE dentures ADD COLUMN patient_id TEXT')
 
-    cursor.execute('SELECT serial_number, patient_name FROM dentures WHERE patient_id IS NULL OR patient_id = ""')
-    for serial_number, patient_name in cursor.fetchall():
-        detected_patient_id = None
-        if patient_name:
-            import re
-            match = re.search(r'\(ID-(\d{6})\)\s*$', patient_name)
-            if match:
-                detected_patient_id = match.group(1)
+    cursor.execute('SELECT serial_number, patient_id, patient_name FROM dentures')
+    for serial_number, existing_patient_id, patient_name in cursor.fetchall():
+        normalized_patient_id = (existing_patient_id or '').strip().upper()
 
-        if not detected_patient_id:
-            detected_patient_id = serial_number[-6:] if serial_number else None
+        if not re.fullmatch(r'[A-Z0-9]{4,10}', normalized_patient_id or ''):
+            current_match = re.search(r'\(ID:\s*e:([A-Z0-9]{4,10})\)\s*$', patient_name or '', flags=re.IGNORECASE)
+            legacy_match = re.search(r'\(ID-([A-Z0-9]{4,10})\)\s*$', patient_name or '', flags=re.IGNORECASE)
+            if current_match:
+                normalized_patient_id = current_match.group(1).upper()
+            elif legacy_match:
+                normalized_patient_id = legacy_match.group(1).upper()
+            else:
+                normalized_patient_id = generate_patient_id()
 
-        if detected_patient_id:
+        normalized_patient_name = normalize_patient_name(patient_name, normalized_patient_id)
+
+        if normalized_patient_id != (existing_patient_id or '') or normalized_patient_name != (patient_name or ''):
             cursor.execute(
-                'UPDATE dentures SET patient_id = ? WHERE serial_number = ?',
-                (detected_patient_id, serial_number)
+                'UPDATE dentures SET patient_id = ?, patient_name = ? WHERE serial_number = ?',
+                (normalized_patient_id, normalized_patient_name, serial_number)
             )
     conn.commit()
     
@@ -184,7 +208,7 @@ def get_dentures():
 def scan_tag():
     data = request.json or {}
     serial = data.get('serialNumber')
-    patient_id = (data.get('patientId') or '').strip()
+    patient_id = (data.get('patientId') or '').strip().upper()
     if not serial:
         return jsonify({'error': 'Missing serialNumber'}), 400
     
@@ -211,8 +235,8 @@ def scan_tag():
             status = 'updated'
     else:
         # Create new entry and preserve a stable patient identifier when provided.
-        inferred_patient_id = patient_id or serial[-6:]
-        inferred_patient_name = f'Patient (ID: e:{inferred_patient_id})'
+        inferred_patient_id = patient_id or generate_patient_id()
+        inferred_patient_name = normalize_patient_name('Patient', inferred_patient_id)
         cursor.execute(
             "INSERT INTO dentures (serial_number, patient_id, patient_name, step_index) VALUES (?, ?, ?, 0)",
             (serial, inferred_patient_id, inferred_patient_name)
@@ -240,7 +264,7 @@ def register_denture():
     data = request.json or {}
     serial = data.get('serialNumber')
     patient_name = (data.get('patientName') or '').strip()
-    patient_id = (data.get('patientId') or '').strip()
+    patient_id = (data.get('patientId') or '').strip().upper()
 
     if not serial:
         return jsonify({'error': 'Missing serialNumber'}), 400
@@ -248,11 +272,9 @@ def register_denture():
         return jsonify({'error': 'Missing patientName'}), 400
 
     if not patient_id:
-        patient_id = serial[-6:]
+        patient_id = generate_patient_id()
 
-    normalized_name = patient_name
-    if f'(ID: e:{patient_id})' not in normalized_name:
-        normalized_name = f'{patient_name} (ID: e:{patient_id})'
+    normalized_name = normalize_patient_name(patient_name, patient_id)
 
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
@@ -394,30 +416,39 @@ def update_denture(serial):
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
 
-    cursor.execute('SELECT serial_number FROM dentures WHERE serial_number = ?', (serial,))
+    cursor.execute('SELECT serial_number, patient_id, patient_name FROM dentures WHERE serial_number = ?', (serial,))
     existing = cursor.fetchone()
     if not existing:
         conn.close()
         return jsonify({'error': 'Entry not found'}), 404
 
-    updates = []
-    params = []
+    existing_patient_id = str(existing[1] or '').strip().upper()
+    existing_patient_name = str(existing[2] or 'Patient').strip()
+
+    if not re.fullmatch(r'[A-Z0-9]{4,10}', existing_patient_id or ''):
+        existing_patient_id = generate_patient_id()
+
+    resolved_patient_id = existing_patient_id
+    resolved_patient_name_input = existing_patient_name
 
     if patient_name is not None:
         cleaned_name = str(patient_name).strip()
         if not cleaned_name:
             conn.close()
             return jsonify({'error': 'patientName cannot be empty'}), 400
-        updates.append('patient_name = ?')
-        params.append(cleaned_name)
+        resolved_patient_name_input = cleaned_name
 
     if patient_id is not None:
-        cleaned_patient_id = str(patient_id).strip()
+        cleaned_patient_id = str(patient_id).strip().upper()
         if not cleaned_patient_id:
             conn.close()
             return jsonify({'error': 'patientId cannot be empty'}), 400
-        updates.append('patient_id = ?')
-        params.append(cleaned_patient_id)
+        resolved_patient_id = cleaned_patient_id
+
+    resolved_patient_name = normalize_patient_name(resolved_patient_name_input, resolved_patient_id)
+
+    updates = ['patient_id = ?', 'patient_name = ?']
+    params = [resolved_patient_id, resolved_patient_name]
 
     if step_index is not None:
         try:
@@ -441,12 +472,12 @@ def update_denture(serial):
     cursor.execute(f"UPDATE dentures SET {', '.join(updates)} WHERE serial_number = ?", tuple(params))
     conn.commit()
 
-    cursor.execute('SELECT serial_number, patient_name, step_index, last_updated FROM dentures WHERE serial_number = ?', (serial,))
+    cursor.execute('SELECT serial_number, patient_id, patient_name, step_index, last_updated FROM dentures WHERE serial_number = ?', (serial,))
     row = cursor.fetchone()
     stages = get_stages_from_db(conn)
     conn.close()
 
-    step_name = stages[min(row[2], max(0, len(stages)-1))]['name'] if stages else None
+    step_name = stages[min(row[3], max(0, len(stages)-1))]['name'] if stages else None
     return jsonify({
         'status': 'success',
         'denture': {

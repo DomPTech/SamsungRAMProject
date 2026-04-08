@@ -63,8 +63,9 @@ async function fetchDentures() {
             <div class="card" style="margin-bottom: 15px; border-left: 8px solid ${d.step_index >= totalSteps - 1 ? 'var(--accent)' : 'var(--secondary)'}">
                 <div style="display: flex; justify-content: space-between; align-items: center;">
                     <div>
-                        <h3 style="margin: 0;">${d.patient} (ID: ${d.serial.slice(-4)})</h3>
+                        <h3 style="margin: 0;">${d.patient}</h3>
                         <p style="margin: 5px 0; color: var(--primary); font-weight: 600;">Status: ${d.step_name}</p>
+                        <p style="margin: 4px 0 0; color: #777; font-size: 0.85rem;">Tray: ${d.serial}</p>
                     </div>
                     <div style="text-align: right;">
                         <span style="font-size: 0.8rem; color: #888;">Step ${d.step_index + 1} of ${totalSteps}</span><br>
@@ -218,7 +219,7 @@ async function loadAdminEntries() {
             el.style.borderBottom = '1px solid #f0f0f0';
             el.innerHTML = `
                 <div style="flex:1; min-width:0;">
-                    <div style="font-weight:600;">${d.patient} <span style="color:#999; font-weight:400;">(${d.serial.slice(-4)})</span></div>
+                    <div style="font-weight:600;">${d.patient}</div>
                     <div style="font-size:0.85rem; color:#666;">${d.step_name || 'Unknown stage'} • ${d.serial}</div>
                 </div>
             `;
@@ -275,7 +276,10 @@ async function deleteEntryAdmin(serial) {
 }
 
 async function editEntryAdmin(entry) {
-    const newPatient = prompt('Patient name', entry.patient || 'Patient');
+    const currentBaseName = String(entry.patient || 'Patient')
+        .replace(/\s*\(ID:\s*e:[^)]+\)\s*$/i, '')
+        .trim() || 'Patient';
+    const newPatient = prompt('Patient name', currentBaseName);
     if (newPatient === null) return;
 
     const currentStepOneBased = (entry.step_index ?? 0) + 1;

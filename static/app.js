@@ -22,28 +22,39 @@ let scannerLocked = false;
 let scanAbortController = null; // AbortController for canceling NFC scans
 
 function generateRandomPatientId() {
-    const min = 100000;
-    const max = 999999;
-    return String(Math.floor(Math.random() * (max - min + 1)) + min);
+    const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    const length = 6;
+
+    if (window.crypto && window.crypto.getRandomValues) {
+        const bytes = new Uint8Array(length);
+        window.crypto.getRandomValues(bytes);
+        return Array.from(bytes, b => alphabet[b % alphabet.length]).join('');
+    }
+
+    let id = '';
+    for (let i = 0; i < length; i += 1) {
+        id += alphabet[Math.floor(Math.random() * alphabet.length)];
+    }
+    return id;
 }
 
 function normalizePatientDisplayName(name, patientId) {
     const cleanedName = (name || '').trim();
-    const cleanedPatientId = (patientId || '').trim();
+    const cleanedPatientId = String(patientId || '').trim().toUpperCase();
+    const nameWithoutIdSuffix = cleanedName
+        .replace(/(?:\s*\(ID:\s*e:[^)]+\)\s*)+$/i, '')
+        .replace(/(?:\s*\(ID-[^)]+\)\s*)+$/i, '')
+        .trim();
 
-    if (!cleanedName && !cleanedPatientId) {
+    if (!nameWithoutIdSuffix && !cleanedPatientId) {
         return '';
     }
 
-    if (!cleanedName) {
+    if (!nameWithoutIdSuffix) {
         return `Patient (ID: e:${cleanedPatientId})`;
     }
 
-    if (cleanedName.includes('(ID: e:')) {
-        return cleanedName;
-    }
-
-    return `${cleanedName} (ID: e:${cleanedPatientId})`;
+    return `${nameWithoutIdSuffix} (ID: e:${cleanedPatientId})`;
 }
 
 function getExistingPatientIdsFromLog() {
@@ -52,9 +63,20 @@ function getExistingPatientIdsFromLog() {
 
     entries.forEach(entry => {
         const text = entry.textContent || '';
-        const match = text.match(/ID-(\d{6})/g);
-        if (match) {
-            match.forEach(idTag => ids.add(idTag.replace('ID-', '')));
+        const currentFormat = text.match(/\(ID:\s*e:([A-Z0-9]{4,10})\)/gi);
+        const legacyFormat = text.match(/ID-([A-Z0-9]{4,10})/gi);
+
+        if (currentFormat) {
+            currentFormat.forEach(idTag => {
+                const parsed = idTag.match(/([A-Z0-9]{4,10})/i);
+                if (parsed) {
+                    ids.add(parsed[1].toUpperCase());
+                }
+            });
+        }
+
+        if (legacyFormat) {
+            legacyFormat.forEach(idTag => ids.add(idTag.replace(/^ID-/i, '').toUpperCase()));
         }
     });
 
@@ -62,7 +84,7 @@ function getExistingPatientIdsFromLog() {
 }
 
 function resolvePatientId(inputId) {
-    const trimmed = (inputId || '').trim();
+    const trimmed = String(inputId || '').trim().toUpperCase();
     if (trimmed) {
         return trimmed;
     }
@@ -75,11 +97,11 @@ function resolvePatientId(inputId) {
         }
     }
 
-    return `${Date.now()}`.slice(-6);
+    return generateRandomPatientId();
 }
 
 function extractPatientIdFromName(name) {
-    const match = String(name || '').match(/\(ID:\s*e:(\d{6})\)\s*$/);
+    const match = String(name || '').match(/\(ID:\s*e:([A-Z0-9]{4,10})\)\s*$/i);
     return match ? match[1] : '';
 }
 
@@ -277,6 +299,11 @@ function showWritePanel() {
 
     setActiveAction('write');
     writePanel.classList.remove('hidden');
+
+    if (!patientIdInput.value.trim()) {
+        patientIdInput.value = resolvePatientId('');
+    }
+
     patientNameInput.focus();
     log('Enter patient name/ID, then tap "Write to Tag".', 'info');
 }
