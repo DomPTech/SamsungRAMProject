@@ -19,6 +19,7 @@ const authStatus = document.getElementById('auth-status');
 let activeAction = null; // 'read' or 'write'
 let nfcSupported = false;
 let scannerLocked = false;
+let scanAbortController = null; // AbortController for canceling NFC scans
 
 function generateRandomPatientId() {
     const min = 100000;
@@ -291,8 +292,9 @@ async function startReadMode() {
     log('Scanning for tray tags. Tap a tray now.', 'info');
 
     try {
+        scanAbortController = new AbortController();
         const ndef = new NDEFReader();
-        await ndef.scan();
+        await ndef.scan({ signal: scanAbortController.signal });
 
         ndef.onreadingerror = () => {
             log('Error reading tag. Is it an NDEF tag?', 'error');
@@ -309,6 +311,7 @@ async function startReadMode() {
             }
 
             log(`Tag detected: ${serialNumber}`, 'success');
+            scanAbortController.abort();  // Stop scanning after first tag
 
             try {
                 const response = await fetch('/api/scan', {
@@ -347,7 +350,9 @@ async function startReadMode() {
     } catch (error) {
         scannerLocked = false;
         setActiveAction(null);
-        log(`Scan failed: ${error.message || error}`, 'error');
+        if (error.name !== 'AbortError') {
+            log(`Scan failed: ${error.message || error}`, 'error');
+        }
     }
 }
 
@@ -375,8 +380,9 @@ async function startWriteMode() {
     log('Ready to write. Tap the target NFC tag now.', 'info');
 
     try {
+        scanAbortController = new AbortController();
         const ndef = new NDEFReader();
-        await ndef.scan();
+        await ndef.scan({ signal: scanAbortController.signal });
 
         ndef.onreadingerror = () => {
             log('Unable to read tag details before writing.', 'error');
@@ -391,6 +397,8 @@ async function startWriteMode() {
                 updateAuthState(false);
                 return;
             }
+
+            scanAbortController.abort();  // Stop scanning after first tag
 
             try {
                 await ndef.write(payload);
@@ -428,6 +436,8 @@ async function startWriteMode() {
         };
     } catch (error) {
         scannerLocked = false;
-        log(`Write setup failed: ${error.message || error}`, 'error');
+        if (error.name !== 'AbortError') {
+            log(`Write setup failed: ${error.message || error}`, 'error');
+        }
     }
 }
