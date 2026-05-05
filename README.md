@@ -22,9 +22,23 @@ The server will create `database.db` and seed default stages on first run.
 
 Recommended Pi deployment:
 1. **Sync to Pi**:
-   Update `PI_HOST` in `sync_to_pi.sh`, then run:
+   Update `PI_HOST` in `sync_to_pi.py` (or `sync_to_pi.sh` if using bash), then run:
+   
+   - **Windows (Easiest)**: Double-click `sync_to_pi.bat` (requires Python 3)
+   - **Windows (Git Bash)**: `bash sync_to_pi.sh` (requires bash + rsync)
+   - **Mac/Linux**: `python3 sync_to_pi.py` or `bash sync_to_pi.sh`
+   
+   > **Requirements:**
+   > - **For `.bat` / `sync_to_pi.py`**: Python 3 (usually pre-installed on Windows)
+   > - **For `.sh` / `sync_to_pi.sh`**: bash/Git Bash + rsync (on Windows, use MSYS2 or install separately)
+
+   **Test your setup before syncing**:
    ```bash
-   ./sync_to_pi.sh
+   # Run diagnostics (tests SSH, rsync availability, exclude patterns)
+   python3 sync_to_pi.py --test
+   
+   # Preview which files will be synced
+   python3 sync_to_pi.py --dry-run
    ```
 2. **Setup Credentials**:
    On the Pi, create your environment file:
@@ -75,3 +89,21 @@ For a full guide on professional domains and persistent tunnels, see [PI_DEPLOYM
 
 Security notes:
 - The development server currently generates a self-signed certificate; for production use a valid TLS certificate (Let's Encrypt) or use Cloudflare Tunnel.
+
+## Installing rsync on Windows Git Bash
+
+The Python sync script (`sync_to_pi.py`) works cross-platform without rsync. However, if you prefer to use the bash script (`sync_to_pi.sh`), you'll need rsync.
+
+**Option 1: Use MSYS2 package manager (Recommended)**
+1. Download and install [MSYS2](https://www.msys2.org/)
+2. Open MSYS2 terminal and run:
+   ```bash
+   pacman -S rsync
+   ```
+3. You can now use rsync from the MSYS2 shell, or add MSYS2's `bin` folder to your Windows PATH
+
+**Option 2: Download pre-built rsync**
+- Download a pre-built rsync binary for Windows from [https://github.com/cwilson/cwRsync/releases](https://github.com/cwilson/cwRsync/releases)
+- Extract and add to your PATH
+
+**Recommendation**: Use `python3 sync_to_pi.py` instead—it's simpler and doesn't require additional tools on Windows.
